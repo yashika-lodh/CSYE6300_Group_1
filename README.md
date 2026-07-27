@@ -1,4 +1,4 @@
-# CSYE 6300 - Final Project Milestone 1
+# CSYE 6300 - Final Project Milestone 2
 
 ## 1. Project Group Number/Name
 Group 1
@@ -13,70 +13,93 @@ Direct-to-consumer (DTC) brands operating across multiple sales channels (Shopif
 
 ![UML Diagram](media/uml_diagram.png)
 
-## 5. Design Patterns to Be Implemented
+## 5. Design Patterns Implemented
 
 | Pattern | Type | Used For |
 |---|---|---|
-| Singleton | Creational | Single shared Inventory instance across all channels |
+| Singleton | Creational | Single shared `Inventory` instance across all channels |
 | Strategy | Behavioral | Interchangeable pricing algorithms (cost-plus, competitor-aware, inventory-aging) |
-| Factory Method | Creational | Creating different channel implementations (Shopify, etc.) |
-| Command | Behavioral | Encapsulating price-change requests with undo/redo support |
-| Decorator | Structural | Adding audit logging to pricing commands dynamically |
-| Observer | Behavioral | Triggering repricing when inventory levels change |
-| Adapter | Structural | Adapting demand signal data to domain model |
-| Template Method | Behavioral | Defining repricing workflow skeleton (fetch → validate → execute → log) |
+| Factory Method | Creational | Creating different channel implementations (Shopify, etc.) via `SalesChannelFactory` |
+| Command | Behavioral | Encapsulating price-change requests with undo/redo support (`PricingCommand`, `PricingCommandInvoker`) |
+| Decorator | Structural | Adding audit logging to pricing commands dynamically (`AuditLoggingCommandDecorator`) |
+| Observer | Behavioral | Triggering repricing when inventory levels change (`InventoryObserver`, `RepricingTriggerObserver`) |
+| Adapter | Structural | Adapting demand signal data to the domain model (`DemandSignalAdapter`) |
+| Template Method | Behavioral | Defining the repricing workflow skeleton: fetch → validate → execute → log (`RepricingWorkflow`) |
 
 ## 6. Tech Stack
-- **Language**: Java (JDK 21 or later)
+- **Language**: Java (JDK 21)
 - **Build Tool**: Maven 3.8+
 - **IDE**: Eclipse or VS Code with Java extensions
 - **Version Control**: Git + GitHub (private repo)
 - **Testing**: JUnit 5
-- **Data Source**: CSV files for inventory and demand signals
+- **Data Source**: CSV files for inventory and demand signals (`data/inventory.csv`, `data/demand_signals.csv`)
 - **Logging**: SLF4J + Logback
-- **Optional**: Spring Boot for REST API (Milestone 3)
+- **External Integration**: Shopify Admin GraphQL API via `ShopifyApiClient`, backed by `MockGraphQLExecutor` for credential-free testing
+- **Planned (Milestone 3)**: Spring Boot for REST API
 
-## 7. Functionalities by End of Milestone 2
+## 7. Functionalities Completed in Milestone 2
 
 ### Core Pattern Implementation
-- [ ] Inventory (Singleton) with thread-safe stock tracking and observer notification
-- [ ] SalesChannel interface with Shopify implementation
-- [ ] PricingStrategy interface with 3 concrete strategies:
-  - CostPlusUpMarkupStrategy
+- [x] Inventory (Singleton) with thread-safe stock tracking and observer notification
+- [x] SalesChannel interface with Shopify implementation
+- [x] PricingStrategy interface with 3 concrete strategies:
+  - CostPlusMarkupStrategy
   - CompetitorAwarePricingStrategy
   - InventoryAgingStrategy
-- [ ] PricingCommand with execute/undo support and full history
-- [ ] AuditLogger (Decorator) wrapping all price updates with compliance logging
-- [ ] Observer pattern wired so inventory changes trigger repricing checks
+- [x] PricingCommand with execute/undo support and full history
+- [x] AuditLoggingCommandDecorator wrapping all price updates with compliance logging
+- [x] Observer pattern wired so inventory changes trigger repricing checks
 
-### NEW: Lightweight AI + Decision Logic
-- [ ] DemandForecaster using simple moving average (7-day vs 30-day)
+### Lightweight AI + Decision Logic
+- [x] DemandForecaster using simple moving average (7-day vs 30-day)
   - Detects trend: RISING (>10% growth), FALLING (<-10% decay), STABLE
   - No external ML library — pure statistical logic
-- [ ] PricingStrategySelector that dynamically picks strategy based on demand trend
+- [x] PricingStrategySelector that dynamically picks strategy based on demand trend
   - RISING demand → CompetitorAwarePricingStrategy (aggressive positioning)
-  - STABLE demand → CostPlusUpMarkupStrategy (margin optimization)
+  - STABLE demand → CostPlusMarkupStrategy (margin optimization)
   - FALLING demand → InventoryAgingStrategy (clear old stock)
 
-### NEW: Shopify API Integration
-- [ ] ShopifyApiClient with GraphQL support
+### Shopify API Integration
+- [x] ShopifyApiClient with GraphQL support
   - Fetch live product data and inventory
   - Update prices in real-time via mutation
-  - Mock-based tests (no real credentials needed)
-- [ ] ShopifyChannel implementing SalesChannel interface
+  - Mock-based tests (no real credentials needed) via `MockGraphQLExecutor`
+- [x] ShopifyChannel implementing SalesChannel interface
   - Caching with 5-minute TTL
   - Error handling with fallback to cached prices
 
-## 8. Contributions
+### Testing
+- [x] JUnit 5 suite covering Inventory, all 3 pricing strategies, Command undo/redo, the audit Decorator, and DemandForecaster trend detection (20 tests total)
+
+## 8. Functionalities Planned for Milestone 3
+- [ ] Spring Boot REST API exposing repricing, inventory, and audit-report endpoints
+- [ ] Additional SalesChannel implementations: own website and social commerce
+- [ ] Persistent storage (replacing CSV files) for inventory, demand history, and audit logs
+- [ ] Scheduled/automated repricing runs, not just Observer-triggered
+- [ ] Basic web dashboard for prices, demand trends, and audit history
+- [ ] Real (non-mocked) Shopify GraphQL transport behind a feature flag
+- [ ] Brand-positioning guardrails (min/max price bounds per SKU)
+
+## 9. Build & Run
+
+```bash
+mvn compile
+mvn test
+mvn compile exec:java -Dexec.mainClass="com.csye6300.group1.pricingengine.Main"
+```
+
+## 10. Contributions
 
 | Person | Module | Responsibility |
 |---|---|---|
-| Aditi Bailur | Inventory & Patterns | Singleton implementation, Observer wiring, core pattern validation |
-| Yashika Lodh | Pricing Intelligence | DemandForecaster, StrategySelector, PricingStrategy implementations |
-| Pratham Rathod | Command & Audit | PricingCommand, PricingCommandInvoker, AuditLogger (Decorator), undo/redo |
-| Sai Vinayaka Venkata Prateek Kacham | Channels & Integration | ShopifyApiClient, ShopifyChannel, error handling, caching logic |
+| Aditi Bailur | Singleton, Observer & Command Core | `Inventory` (Singleton), Observer wiring (`InventoryObserver`, `StockChangeEvent`, `RepricingTriggerObserver`), `PricingCommand`/`PriceReceiver`/`UpdatePriceCommand` |
+| Yashika Lodh | Strategy & Factory Method | `PricingStrategy` + 3 concrete strategies, `SalesChannelFactory`, `SalesChannel` interface, demand domain models |
+| Pratham Rathod | Decorator, Invoker & Template Method | `AuditLoggingCommandDecorator`, `PricingCommandInvoker`, `RepricingWorkflow`/`StandardRepricingWorkflow`, `PricingStrategySelector` |
+| Sai Vinayaka Venkata Prateek Kacham | Adapter & Shopify Integration | `DemandSignalAdapter`, `ShopifyApiClient`, `MockGraphQLExecutor`, `ShopifyChannel`, `ChannelManager` |
 
-## 9. GitHub Repository
+## 11. GitHub Repository
 https://github.com/yashika-lodh/CSYE6300_Group_1.git
 
-
+## 12. Additional Documentation
+- Design Document: `docs/DesignDocument_Milestone2.md`
+- Updated Milestone 2 write-up: `Milestone2_Document.docx`
