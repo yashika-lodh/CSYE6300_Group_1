@@ -1,0 +1,49 @@
+package com.csye6300.group1.pricingengine.workflow;
+
+import com.csye6300.group1.pricingengine.forecast.DemandDataPoint;
+import com.csye6300.group1.pricingengine.pricing.PricingContext;
+
+import java.util.List;
+import java.util.logging.Logger;
+
+/**
+ * Template Method pattern: defines the fixed skeleton every repricing run
+ * follows -- fetch -> validate -> execute -> log -- while letting subclasses
+ * (or, in Milestone 3, different workflow variants such as a
+ * "ScheduledRepricingWorkflow") override individual steps.
+ */
+public abstract class RepricingWorkflow {
+
+    protected final Logger logger = Logger.getLogger(getClass().getName());
+
+    /** The template method. Marked final so the overall sequence can't be reordered by subclasses. */
+    public final void reprice(String sku) {
+        List<DemandDataPoint> demandHistory = fetchDemandHistory(sku);
+
+        if (!validate(sku, demandHistory)) {
+            logger.warning("Validation failed for " + sku + "; skipping reprice.");
+            return;
+        }
+
+        PricingContext context = buildPricingContext(sku, demandHistory);
+        double newPrice = execute(sku, context, demandHistory);
+
+        log(sku, newPrice);
+    }
+
+    protected abstract List<DemandDataPoint> fetchDemandHistory(String sku);
+
+    /** Hook with a sensible default: any history at all counts as valid. Subclasses may tighten this. */
+    protected boolean validate(String sku, List<DemandDataPoint> demandHistory) {
+        return demandHistory != null && !demandHistory.isEmpty();
+    }
+
+    protected abstract PricingContext buildPricingContext(String sku, List<DemandDataPoint> demandHistory);
+
+    /** Runs strategy selection + price calculation + command execution; returns the new price. */
+    protected abstract double execute(String sku, PricingContext context, List<DemandDataPoint> demandHistory);
+
+    protected void log(String sku, double newPrice) {
+        logger.info("Repriced " + sku + " -> " + newPrice);
+    }
+}
