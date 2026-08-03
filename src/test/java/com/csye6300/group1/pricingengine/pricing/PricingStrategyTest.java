@@ -48,4 +48,27 @@ class PricingStrategyTest {
         PricingContext context = new PricingContext("SKU-1", 10.0, 12.0, 8.0, 90, 5);
         assertTrue(strategy.calculatePrice(context) >= 10.5); // cost * 1.05
     }
+
+    @Test
+    void guardrailCeilingCapsCostPlusMarkupPrice() {
+        CostPlusMarkupStrategy strategy = new CostPlusMarkupStrategy(0.5); // would be 15.0 uncapped
+        PricingContext context = new PricingContext("SKU-1", 10.0, 20.0, 18.0, 5, 100, 0.0, 13.0);
+        assertEquals(13.0, strategy.calculatePrice(context));
+    }
+
+    @Test
+    void guardrailFloorRaisesCompetitorAwarePriceAboveMarginFloor() {
+        CompetitorAwarePricingStrategy strategy = new CompetitorAwarePricingStrategy(0.10);
+        // Undercut would land at 27.0, well above the brand-positioning floor of 29.0.
+        PricingContext context = new PricingContext("SKU-1", 10.0, 20.0, 30.0, 5, 100, 29.0, 0.0);
+        assertEquals(29.0, strategy.calculatePrice(context));
+    }
+
+    @Test
+    void guardrailsDoNotAffectStrategiesWhenUnset() {
+        CostPlusMarkupStrategy strategy = new CostPlusMarkupStrategy(0.5);
+        PricingContext withoutGuardrails = new PricingContext("SKU-1", 10.0, 20.0, 18.0, 5, 100);
+        PricingContext withDisabledGuardrails = new PricingContext("SKU-1", 10.0, 20.0, 18.0, 5, 100, 0.0, 0.0);
+        assertEquals(strategy.calculatePrice(withoutGuardrails), strategy.calculatePrice(withDisabledGuardrails));
+    }
 }

@@ -20,7 +20,8 @@ public class CompetitorAwarePricingStrategy implements PricingStrategy {
     public double calculatePrice(PricingContext context) {
         double target = context.getCompetitorPrice() * (1 - undercutPercentage);
         double floor = context.getCost() * 1.10; // never price below 10% margin
-        return round(Math.max(target, floor));
+        double price = Math.max(target, floor);
+        return round(context.applyGuardrails(price));
     }
 
     @Override

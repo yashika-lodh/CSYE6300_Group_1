@@ -12,14 +12,19 @@ import com.csye6300.group1.pricingengine.shopify.ShopifyApiClient;
 public class SalesChannelFactory {
 
     public enum ChannelType {
-        SHOPIFY
-        // OWN_WEBSITE, SOCIAL_COMMERCE planned for Milestone 3
+        SHOPIFY,
+        OWN_WEBSITE,
+        SOCIAL_COMMERCE
     }
 
     public SalesChannel createChannel(ChannelType type) {
         switch (type) {
             case SHOPIFY:
                 return new ShopifyChannel(new ShopifyApiClient());
+            case OWN_WEBSITE:
+                return new OwnWebsiteChannel();
+            case SOCIAL_COMMERCE:
+                return new SocialCommerceChannel();
             default:
                 throw new IllegalArgumentException("Unsupported channel type: " + type);
         }
