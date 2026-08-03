@@ -15,7 +15,9 @@ public class InventoryAgingStrategy implements PricingStrategy {
         double discount = agingFactor * MAX_DISCOUNT;
         double price = context.getCurrentPrice() * (1 - discount);
         double floor = context.getCost() * 1.05; // never sell below 5% margin
-        return round(Math.max(price, floor));
+        double result = Math.max(price, floor);
+        return round(context.applyGuardrails(result));
+
     }
 
     @Override

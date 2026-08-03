@@ -19,7 +19,7 @@ public class CostPlusMarkupStrategy implements PricingStrategy {
     @Override
     public double calculatePrice(PricingContext context) {
         double price = context.getCost() * (1 + markupPercentage);
-        return round(price);
+        return round(context.applyGuardrails(price));
     }
 
     @Override
