@@ -20,6 +20,11 @@ public class AuditLoggingCommandDecorator implements PricingCommand {
     private final Logger logger = Logger.getLogger(AuditLoggingCommandDecorator.class.getName());
     private final List<String> auditTrail = new CopyOnWriteArrayList<>();
 
+    // Shared across every decorator instance so the REST API's audit-report
+    // endpoint can return one system-wide compliance log, not just the
+    // history of a single command.
+    private static final List<String> GLOBAL_AUDIT_TRAIL = new CopyOnWriteArrayList<>();
+
     public AuditLoggingCommandDecorator(PricingCommand wrapped) {
         this.wrapped = wrapped;
     }
@@ -40,12 +45,18 @@ public class AuditLoggingCommandDecorator implements PricingCommand {
         String entry = String.format("[%s] %s sku=%s originalPrice=%.2f newPrice=%.2f",
                 Instant.now(), action, wrapped.getSku(), wrapped.getOriginalPrice(), wrapped.getNewPrice());
         auditTrail.add(entry);
+        GLOBAL_AUDIT_TRAIL.add(entry);
         logger.info(entry);
     }
 
     /** Returns a full compliance report of every logged action for this command. */
     public List<String> generateAuditReport() {
         return Collections.unmodifiableList(auditTrail);
+    }
+
+    /** Returns the compliance report across every command ever decorated, for the audit-report endpoint. */
+    public static List<String> getGlobalAuditTrail() {
+        return Collections.unmodifiableList(GLOBAL_AUDIT_TRAIL);
     }
 
     @Override

@@ -6,3 +6,6 @@ data/pricingdb.mv.db
 data/pricingdb.trace.db
 
 .DS_Store
+.idea/
+*.iml
+.vscode/
