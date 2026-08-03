@@ -1,5 +1,10 @@
 target/
 *.class
+
+# H2 file-backed database created at runtime by InventoryRepository (Milestone 3)
+data/pricingdb.mv.db
+data/pricingdb.trace.db
+
 .DS_Store
 .idea/
 *.iml
