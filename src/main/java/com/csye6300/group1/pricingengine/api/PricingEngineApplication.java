@@ -5,6 +5,7 @@ import com.csye6300.group1.pricingengine.channel.SalesChannelFactory;
 import com.csye6300.group1.pricingengine.command.PricingCommandInvoker;
 import com.csye6300.group1.pricingengine.forecast.DemandDataPoint;
 import com.csye6300.group1.pricingengine.forecast.DemandForecaster;
+import com.csye6300.group1.pricingengine.forecast.DemandSignalRepository;
 import com.csye6300.group1.pricingengine.inventory.Inventory;
 import com.csye6300.group1.pricingengine.selector.PricingStrategySelector;
 import com.csye6300.group1.pricingengine.workflow.PricingInputsProvider;
@@ -54,8 +55,13 @@ public class PricingEngineApplication {
 
     @Bean
     public Map<String, List<DemandDataPoint>> demandHistoryBySku() {
-        Map<String, List<DemandDataPoint>> demandHistory = new HashMap<>();
-        demandHistory.put("SKU-1001", buildSampleRisingDemand("SKU-1001"));
+        Map<String, List<DemandDataPoint>> demandHistory =
+                new HashMap<>(new DemandSignalRepository().loadDemandHistoryBySku());
+        if (demandHistory.isEmpty()) {
+            // CSV missing or empty (e.g. running from an unusual working directory) --
+            // fall back to the Milestone 2 sample data so the app still starts and demos cleanly.
+            demandHistory.put("SKU-1001", buildSampleRisingDemand("SKU-1001"));
+        }
         return demandHistory;
     }
 

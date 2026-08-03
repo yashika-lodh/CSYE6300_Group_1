@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dynamic Pricing Engine — Dashboard</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 2rem; background: #f7f7f9; color: #222; }
+  h1 { margin-bottom: 0.25rem; }
+  .subtitle { color: #666; margin-top: 0; }
+  .panel { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #eee; }
+  input, button { padding: 0.4rem 0.6rem; font-size: 1rem; }
+  button { cursor: pointer; }
+  .row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+  .status { font-size: 0.9rem; color: #666; }
+</style>
+</head>
+<body>
+
+<h1>Dynamic Pricing Engine</h1>
+<p class="subtitle">Multi-Channel DTC Retail — live view over the REST API</p>
+
+<div class="panel">
+  <h2>Inventory</h2>
+  <div class="row">
+    <button onclick="loadInventory()">Refresh</button>
+    <span id="inventoryStatus" class="status"></span>
+  </div>
+  <table id="inventoryTable">
+    <thead><tr><th>SKU</th><th>Quantity</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="panel">
+  <h2>Prices by Channel</h2>
+  <div class="row">
+    <input id="priceSku" placeholder="SKU (e.g. SKU-1001)" value="SKU-1001">
+    <button onclick="loadPrices()">Get Prices</button>
+    <button onclick="reprice()">Trigger Reprice</button>
+    <span id="priceStatus" class="status"></span>
+  </div>
+  <table id="priceTable">
+    <thead><tr><th>Channel</th><th>Price</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="panel">
+  <h2>Audit Trail</h2>
+  <div class="row">
+    <input id="auditSku" placeholder="Filter by SKU (optional)">
+    <button onclick="loadAudit()">Refresh</button>
+    <span id="auditStatus" class="status"></span>
+  </div>
+  <ul id="auditList"></ul>
+</div>
+
+<script>
+  const API_BASE = ""; // same origin as the Spring Boot app
+
+  async function loadInventory() {
+    const status = document.getElementById('inventoryStatus');
+    status.textContent = "Loading...";
+    try {
+      const res = await fetch(`${API_BASE}/api/inventory`);
+      const data = await res.json();
+      const tbody = document.querySelector('#inventoryTable tbody');
+      tbody.innerHTML = '';
+      Object.entries(data).forEach(([sku, qty]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${sku}</td><td>${qty}</td>`;
+        tbody.appendChild(tr);
+      });
+      status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+      status.textContent = "Failed to load inventory: " + e.message;
+    }
+  }
+
+  async function loadPrices() {
+    const sku = document.getElementById('priceSku').value.trim();
+    const status = document.getElementById('priceStatus');
+    if (!sku) { status.textContent = "Enter a SKU first."; return; }
+    status.textContent = "Loading...";
+    try {
+      const res = await fetch(`${API_BASE}/api/pricing/${encodeURIComponent(sku)}`);
+      const data = await res.json();
+      const tbody = document.querySelector('#priceTable tbody');
+      tbody.innerHTML = '';
+      Object.entries(data.prices || {}).forEach(([channel, price]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${channel}</td><td>$${Number(price).toFixed(2)}</td>`;
+        tbody.appendChild(tr);
+      });
+      status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+      status.textContent = "Failed to load prices: " + e.message;
+    }
+  }
+
+  async function reprice() {
+    const sku = document.getElementById('priceSku').value.trim();
+    const status = document.getElementById('priceStatus');
+    if (!sku) { status.textContent = "Enter a SKU first."; return; }
+    status.textContent = "Repricing...";
+    try {
+      await fetch(`${API_BASE}/api/pricing/${encodeURIComponent(sku)}/reprice`, { method: 'POST' });
+      await loadPrices();
+      await loadAudit();
+    } catch (e) {
+      status.textContent = "Reprice failed: " + e.message;
+    }
+  }
+
+  async function loadAudit() {
+    const sku = document.getElementById('auditSku').value.trim();
+    const status = document.getElementById('auditStatus');
+    status.textContent = "Loading...";
+    try {
+      const url = sku ? `${API_BASE}/api/audit/${encodeURIComponent(sku)}` : `${API_BASE}/api/audit`;
+      const res = await fetch(url);
+      const entries = await res.json();
+      const list = document.getElementById('auditList');
+      list.innerHTML = '';
+      entries.forEach(entry => {
+        const li = document.createElement('li');
+        li.textContent = entry;
+        list.appendChild(li);
+      });
+      status.textContent = `${entries.length} entries`;
+    } catch (e) {
+      status.textContent = "Failed to load audit trail: " + e.message;
+    }
+  }
+
+  loadInventory();
+  loadAudit();
+</script>
+
+</body>
+</html>

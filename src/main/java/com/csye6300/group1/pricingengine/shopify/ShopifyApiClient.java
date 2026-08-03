@@ -31,8 +31,17 @@ public class ShopifyApiClient {
     private final Map<String, Instant> cacheTimestamps = new ConcurrentHashMap<>();
 
     public ShopifyApiClient() {
-        this(new MockGraphQLExecutor());
+    this(buildDefaultExecutor());
+}
+
+private static GraphQLExecutor buildDefaultExecutor() {
+    String domain = System.getenv("SHOPIFY_SHOP_DOMAIN");
+    String token = System.getenv("SHOPIFY_ACCESS_TOKEN");
+    if (domain != null && !domain.isBlank() && token != null && !token.isBlank()) {
+        return new HttpGraphQLExecutor(domain, token);
     }
+    return new MockGraphQLExecutor();
+}
 
     public ShopifyApiClient(GraphQLExecutor executor) {
         this.executor = executor;
