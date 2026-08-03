@@ -71,6 +71,15 @@ public final class Inventory {
         return Map.copyOf(stock);
     }
 
+    /**
+     * Seeds the in-memory stock map from durable storage at startup
+     * (Milestone 3: InventoryRepository, replacing the Milestone 2 CSV load).
+     * Does not notify observers - this is a silent load, not a stock change.
+     */
+    public void loadFromRepository(InventoryRepository repository) {
+        stock.putAll(repository.findAll());
+    }
+
     private void notifyObservers(StockChangeEvent event) {
         for (InventoryObserver observer : observers) {
             observer.onStockChanged(event);
