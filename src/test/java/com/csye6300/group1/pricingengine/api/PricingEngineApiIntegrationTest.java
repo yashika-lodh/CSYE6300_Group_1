@@ -9,6 +9,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.List;
 import java.util.Map;
@@ -17,11 +18,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * End-to-end test that boots the real Spring context (Singleton Inventory,
- * Factory-built Shopify channel, Strategy/Selector, Command/Decorator,
- * Template Method workflow) and drives it purely through the REST layer.
+ * End-to-end test that boots the real Spring context (Singleton Inventory
+ * seeded from InventoryRepository, all three Factory-built channels,
+ * Strategy/Selector, Command/Decorator, Template Method workflow) and drives
+ * it purely through the REST layer.
+ *
+ * Inventory is a plain-Java Singleton (a static field, not a Spring bean), so
+ * it outlives any one Spring context. Rebuilding the context after every test
+ * method (rather than only resetting Inventory's own state) guarantees the
+ * Observer wiring done in the @Bean methods -- RepricingTriggerObserver and
+ * InventoryPersistenceObserver -- is re-registered fresh each time, instead
+ * of silently disappearing after the first tearDown() clears it.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class PricingEngineApiIntegrationTest {
 
     @LocalServerPort
@@ -65,6 +75,8 @@ class PricingEngineApiIntegrationTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<String, Object> prices = (Map<String, Object>) response.getBody().get("prices");
         assertTrue(prices.containsKey("Shopify"));
+        assertTrue(prices.containsKey("OwnWebsite"));
+        assertTrue(prices.containsKey("SocialCommerce"));
     }
 
     @Test
