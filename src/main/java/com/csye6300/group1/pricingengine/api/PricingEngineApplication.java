@@ -7,6 +7,8 @@ import com.csye6300.group1.pricingengine.forecast.DemandDataPoint;
 import com.csye6300.group1.pricingengine.forecast.DemandForecaster;
 import com.csye6300.group1.pricingengine.forecast.DemandSignalRepository;
 import com.csye6300.group1.pricingengine.inventory.Inventory;
+import com.csye6300.group1.pricingengine.inventory.InventoryPersistenceObserver;
+import com.csye6300.group1.pricingengine.inventory.InventoryRepository;
 import com.csye6300.group1.pricingengine.selector.PricingStrategySelector;
 import com.csye6300.group1.pricingengine.workflow.PricingInputsProvider;
 import com.csye6300.group1.pricingengine.workflow.RepricingTriggerObserver;
@@ -24,10 +26,10 @@ import java.util.Map;
 
 /**
  * Milestone 3 entry point: wraps the same engine wired by hand in Main
- * (Singleton Inventory, Factory-built channels, Strategy/Selector,
- * Command/Decorator, Template Method workflow, Observer) behind a Spring
- * Boot REST API instead of a one-shot console demo. Main.java is left
- * untouched as the plain-Java demo driver.
+ * (Singleton Inventory backed by InventoryRepository, Factory-built
+ * channels, Strategy/Selector, Command/Decorator, Template Method workflow,
+ * Observer) behind a Spring Boot REST API instead of a one-shot console
+ * demo. Main.java is left untouched as the plain-Java demo driver.
  */
 @SpringBootApplication
 public class PricingEngineApplication {
@@ -36,9 +38,21 @@ public class PricingEngineApplication {
         SpringApplication.run(PricingEngineApplication.class, args);
     }
 
+    @Bean(destroyMethod = "close")
+    public InventoryRepository inventoryRepository() {
+        return new InventoryRepository();
+    }
+
     @Bean
-    public Inventory inventory() {
+    public Inventory inventory(InventoryRepository inventoryRepository) {
+        // Milestone 3: seed the Singleton from the DB-backed repository (replacing
+        // the Milestone 2 CSV load), then register the same persistence Observer
+        // Main.java uses, so stock changes made through InventoryController are
+        // written through to the DB exactly like changes made by the console demo.
         Inventory inventory = Inventory.getInstance();
+        inventory.loadFromRepository(inventoryRepository);
+        inventory.addObserver(new InventoryPersistenceObserver(inventoryRepository));
+
         if (inventory.getStock("SKU-1001") == 0) {
             inventory.updateStock("SKU-1001", 50);
         }
@@ -47,9 +61,11 @@ public class PricingEngineApplication {
 
     @Bean
     public ChannelManager channelManager() {
+        SalesChannelFactory channelFactory = new SalesChannelFactory();
         ChannelManager channelManager = new ChannelManager();
-        channelManager.registerChannel(
-                new SalesChannelFactory().createChannel(SalesChannelFactory.ChannelType.SHOPIFY));
+        channelManager.registerChannel(channelFactory.createChannel(SalesChannelFactory.ChannelType.SHOPIFY));
+        channelManager.registerChannel(channelFactory.createChannel(SalesChannelFactory.ChannelType.OWN_WEBSITE));
+        channelManager.registerChannel(channelFactory.createChannel(SalesChannelFactory.ChannelType.SOCIAL_COMMERCE));
         return channelManager;
     }
 
