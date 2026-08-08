@@ -13,16 +13,19 @@ import com.csye6300.group1.pricingengine.selector.PricingStrategySelector;
 import com.csye6300.group1.pricingengine.workflow.PricingInputsProvider;
 import com.csye6300.group1.pricingengine.workflow.RepricingTriggerObserver;
 import com.csye6300.group1.pricingengine.workflow.RepricingWorkflow;
+import com.csye6300.group1.pricingengine.workflow.ScheduledRepricingWorkflow;
 import com.csye6300.group1.pricingengine.workflow.StandardRepricingWorkflow;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Milestone 3 entry point: wraps the same engine wired by hand in Main
@@ -88,6 +91,12 @@ public class PricingEngineApplication {
             @Override public double getCurrentPrice(String sku) { return 24.99; }
             @Override public double getCompetitorPrice(String sku) { return 22.50; }
             @Override public int getDaysInInventory(String sku) { return 10; }
+
+            // Milestone 3 brand-positioning guardrails: no strategy may ever price
+            // this SKU below $21.50 or above $25.00, regardless of what cost,
+            // competitor price, or demand trend would otherwise produce.
+            @Override public double getMinPrice(String sku) { return 21.50; }
+            @Override public double getMaxPrice(String sku) { return 25.00; }
         };
     }
 
@@ -96,6 +105,11 @@ public class PricingEngineApplication {
         return new PricingCommandInvoker();
     }
 
+    // @Primary: PricingController depends on RepricingWorkflow by type, and
+    // scheduledRepricingWorkflow() below is also assignable to RepricingWorkflow
+    // (ScheduledRepricingWorkflow extends StandardRepricingWorkflow). Marking the
+    // reactive/on-demand workflow primary keeps that injection unambiguous.
+    @Primary
     @Bean
     public RepricingWorkflow repricingWorkflow(Inventory inventory,
                                                 Map<String, List<DemandDataPoint>> demandHistoryBySku,
@@ -113,6 +127,29 @@ public class PricingEngineApplication {
         // Same Observer wiring as Main: a stock change (e.g. via InventoryController)
         // automatically triggers a reprice, in addition to the manual /reprice endpoint.
         inventory.addObserver(new RepricingTriggerObserver(workflow));
+        return workflow;
+    }
+
+    /**
+     * Milestone 3: a second Template Method subclass that reprices every known
+     * SKU on a fixed schedule, independent of any stock-change Observer event --
+     * the same behavior Main.java demonstrates by hand, now running continuously
+     * inside the REST app instead of only in the one-shot console demo.
+     */
+    @Bean(destroyMethod = "stopSchedule")
+    public ScheduledRepricingWorkflow scheduledRepricingWorkflow(Map<String, List<DemandDataPoint>> demandHistoryBySku,
+                                                                  PricingInputsProvider pricingInputsProvider,
+                                                                  ChannelManager channelManager,
+                                                                  PricingCommandInvoker pricingCommandInvoker) {
+        ScheduledRepricingWorkflow workflow = new ScheduledRepricingWorkflow(
+                demandHistoryBySku,
+                pricingInputsProvider,
+                new DemandForecaster(),
+                new PricingStrategySelector(),
+                channelManager,
+                pricingCommandInvoker);
+
+        workflow.startSchedule(demandHistoryBySku.keySet(), 0, 1, TimeUnit.HOURS);
         return workflow;
     }
 

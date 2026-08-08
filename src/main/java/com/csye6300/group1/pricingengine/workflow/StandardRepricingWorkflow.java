@@ -63,7 +63,9 @@ public class StandardRepricingWorkflow extends RepricingWorkflow {
                 inputsProvider.getCurrentPrice(sku),
                 inputsProvider.getCompetitorPrice(sku),
                 inputsProvider.getDaysInInventory(sku),
-                inventory.getStock(sku));
+                inventory.getStock(sku),
+                inputsProvider.getMinPrice(sku),
+                inputsProvider.getMaxPrice(sku));
     }
 
     @Override
