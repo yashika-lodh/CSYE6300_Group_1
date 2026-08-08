@@ -17,6 +17,7 @@ import com.csye6300.group1.pricingengine.workflow.ScheduledRepricingWorkflow;
 import com.csye6300.group1.pricingengine.workflow.StandardRepricingWorkflow;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit;
  * demo. Main.java is left untouched as the plain-Java demo driver.
  */
 @SpringBootApplication
+@EnableConfigurationProperties(PricingInputsProperties.class)
 public class PricingEngineApplication {
 
     public static void main(String[] args) {
@@ -84,20 +86,12 @@ public class PricingEngineApplication {
         return demandHistory;
     }
 
+    // Reads cost/competitor-price/aging/guardrail values from application.properties
+    // (pricing.default-* and pricing.skus.<SKU>.*) via PricingInputsProperties, instead
+    // of hardcoding them here -- so tuning a guardrail no longer requires a rebuild.
     @Bean
-    public PricingInputsProvider pricingInputsProvider() {
-        return new PricingInputsProvider() {
-            @Override public double getCost(String sku) { return 15.00; }
-            @Override public double getCurrentPrice(String sku) { return 24.99; }
-            @Override public double getCompetitorPrice(String sku) { return 22.50; }
-            @Override public int getDaysInInventory(String sku) { return 10; }
-
-            // Milestone 3 brand-positioning guardrails: no strategy may ever price
-            // this SKU below $21.50 or above $25.00, regardless of what cost,
-            // competitor price, or demand trend would otherwise produce.
-            @Override public double getMinPrice(String sku) { return 21.50; }
-            @Override public double getMaxPrice(String sku) { return 25.00; }
-        };
+    public PricingInputsProvider pricingInputsProvider(PricingInputsProperties properties) {
+        return new ConfigurablePricingInputsProvider(properties);
     }
 
     @Bean
