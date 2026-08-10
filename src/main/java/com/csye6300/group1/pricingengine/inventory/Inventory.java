@@ -58,9 +58,13 @@ public final class Inventory {
         notifyObservers(new StockChangeEvent(sku, previous, newQuantity));
     }
 
-    /** Applies a relative delta (positive = restock, negative = sale/decrement). */
+    /**
+     * Applies a relative delta (positive = restock, negative = sale/decrement).
+     * Clamped at 0 -- a sale can't take physical stock below zero, so a delta
+     * larger than the current quantity just zeroes it out rather than going negative.
+     */
     public void adjustStock(String sku, int delta) {
-        updateStock(sku, getStock(sku) + delta);
+        updateStock(sku, Math.max(0, getStock(sku) + delta));
     }
 
     public int getStock(String sku) {

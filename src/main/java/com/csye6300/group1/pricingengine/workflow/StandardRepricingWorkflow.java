@@ -3,6 +3,7 @@ package com.csye6300.group1.pricingengine.workflow;
 import com.csye6300.group1.pricingengine.audit.AuditLoggingCommandDecorator;
 import com.csye6300.group1.pricingengine.channel.ChannelManager;
 import com.csye6300.group1.pricingengine.channel.SalesChannel;
+import com.csye6300.group1.pricingengine.command.PricingCommand;
 import com.csye6300.group1.pricingengine.command.PricingCommandInvoker;
 import com.csye6300.group1.pricingengine.command.UpdatePriceCommand;
 import com.csye6300.group1.pricingengine.forecast.DemandDataPoint;
@@ -22,8 +23,10 @@ import java.util.Map;
  *   fetch    -> DemandForecaster reads demand history
  *   validate -> RepricingWorkflow's default hook
  *   execute  -> PricingStrategySelector picks a Strategy, an UpdatePriceCommand
- *               (wrapped by AuditLoggingCommandDecorator) applies it across
- *               every channel in ChannelManager
+ *               applies it across every channel in ChannelManager, with
+ *               AuditLoggingCommandDecorator wrapping only the first
+ *               channel's command so one reprice produces one audit entry
+ *               instead of one per channel
  *   log      -> handled by the Decorator + base class logging
  */
 public class StandardRepricingWorkflow extends RepricingWorkflow {
@@ -63,9 +66,7 @@ public class StandardRepricingWorkflow extends RepricingWorkflow {
                 inputsProvider.getCurrentPrice(sku),
                 inputsProvider.getCompetitorPrice(sku),
                 inputsProvider.getDaysInInventory(sku),
-                inventory.getStock(sku),
-                inputsProvider.getMinPrice(sku),
-                inputsProvider.getMaxPrice(sku));
+                inventory.getStock(sku));
     }
 
     @Override
@@ -74,10 +75,18 @@ public class StandardRepricingWorkflow extends RepricingWorkflow {
         PricingStrategy strategy = strategySelector.selectStrategy(trend);
         double newPrice = strategy.calculatePrice(context);
 
+        // Log once per reprice, not once per channel: only the first channel's
+        // command is wrapped in AuditLoggingCommandDecorator. The remaining
+        // channels' commands still go through the invoker (so undo/redo history
+        // is complete for all of them) -- they just aren't separately logged.
+        boolean alreadyLogged = false;
         for (SalesChannel channel : channelManager.getChannels()) {
-            AuditLoggingCommandDecorator loggedCommand =
-                    new AuditLoggingCommandDecorator(new UpdatePriceCommand(channel, sku, newPrice));
-            invoker.executeCommand(loggedCommand);
+            PricingCommand command = new UpdatePriceCommand(channel, sku, newPrice);
+            if (!alreadyLogged) {
+                command = new AuditLoggingCommandDecorator(command);
+                alreadyLogged = true;
+            }
+            invoker.executeCommand(command);
             channel.publishPrice(sku);
         }
 

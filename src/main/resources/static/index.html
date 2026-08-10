@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dynamic Pricing Engine — Dashboard</title>
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>Dynamic Pricing Engine</h1>
+    <p class="subtitle">Multi-Channel DTC Retail — Live Dashboard</p>
+    <div id="status-banner" class="status-banner status-ok" hidden></div>
+  </header>
+
+  <main class="dashboard-grid">
+
+    <!-- Inventory Panel -->
+    <section class="panel" id="inventory-panel">
+      <h2>Inventory</h2>
+      <div class="panel-toolbar">
+        <input id="inventory-sku-input" type="text" placeholder="SKU (e.g. SKU-1001)" />
+        <button id="inventory-lookup-btn">Add / Track</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Stock</th>
+            <th>Adjust</th>
+          </tr>
+        </thead>
+        <tbody id="inventory-rows">
+          <!-- rows injected by inventory-panel.js -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Pricing Panel -->
+    <section class="panel" id="pricing-panel">
+      <h2>Pricing</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Channel</th>
+            <th>Price</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="pricing-rows">
+          <!-- rows injected by pricing-panel.js -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Audit Panel -->
+    <section class="panel panel-wide" id="audit-panel">
+      <div class="panel-header-row">
+        <h2>Audit Log</h2>
+        <div class="audit-toolbar">
+          <select id="audit-sku-filter" aria-label="Filter audit log by SKU">
+            <option value="">All SKUs</option>
+          </select>
+          <button id="audit-refresh-btn">Refresh</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>SKU</th>
+            <th>Original Price</th>
+            <th>New Price</th>
+          </tr>
+        </thead>
+        <tbody id="audit-rows">
+          <!-- rows injected by audit-panel.js -->
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <span id="last-updated">Not yet loaded</span>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/inventory-panel.js"></script>
+  <script src="js/pricing-panel.js"></script>
+  <script src="js/audit-panel.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
