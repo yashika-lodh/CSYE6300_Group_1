@@ -90,6 +90,32 @@
       </table>
     </section>
 
+    <!-- Guardrails Panel -->
+    <section class="panel panel-wide" id="guardrails-panel">
+      <h2>Brand-Positioning Guardrails</h2>
+      <p class="panel-subtitle">
+        The min/max price bounds <code>PricingContext.applyGuardrails()</code>
+        clamps every <code>PricingStrategy</code>'s output to, per SKU. Edit
+        and save to change them at runtime — leave a field blank to leave it
+        unchanged.
+      </p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Current Price</th>
+            <th>Min Price</th>
+            <th>Max Price</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="guardrails-rows">
+          <!-- rows injected by guardrails-panel.js -->
+        </tbody>
+      </table>
+    </section>
+
     <!-- Demand Forecast Panel -->
     <section class="panel panel-wide" id="forecast-panel">
       <h2>Demand Forecast</h2>
@@ -150,6 +176,7 @@
   <script src="js/inventory-panel.js"></script>
   <script src="js/onboarding-panel.js"></script>
   <script src="js/pricing-panel.js"></script>
+  <script src="js/guardrails-panel.js"></script>
   <script src="js/forecast-panel.js"></script>
   <script src="js/audit-panel.js"></script>
   <script src="js/dashboard.js"></script>

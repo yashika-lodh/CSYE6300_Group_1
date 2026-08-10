@@ -233,6 +233,29 @@ button.secondary:hover {
 .trend-badge.FALLING { background: #fbeaea; color: var(--color-falling); }
 .trend-badge.STABLE { background: #eef0f2; color: var(--color-stable); }
 
+.guardrail-input {
+  width: 90px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.guardrail-status {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.guardrail-status.guardrail-ok {
+  color: var(--color-ok-text);
+}
+
+.guardrail-status.guardrail-floor,
+.guardrail-status.guardrail-ceiling {
+  color: var(--color-danger-text);
+  font-weight: 600;
+}
+
 .onboarding-form {
   display: flex;
   flex-wrap: wrap;

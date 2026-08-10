@@ -56,6 +56,7 @@ const Dashboard = (() => {
     await InventoryPanel.render();
     await Promise.all([
       PricingPanel.render(),
+      GuardrailsPanel.render(),
       ForecastPanel.render(),
       AuditPanel.render(),
     ]);

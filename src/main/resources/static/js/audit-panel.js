@@ -16,7 +16,12 @@
 
 const AuditPanel = (() => {
 
-  const LINE_PATTERN = /^\[(.+?)\]\s+(\S+)\s+sku=(\S+)\s+originalPrice=([\d.]+)\s+newPrice=([\d.]+)/;
+  // sku is captured non-greedily up to the " originalPrice=" anchor (not \S+)
+  // since a SKU entered with a space in it (e.g. "SKU 1003" instead of
+  // "SKU-1003") is still a valid string as far as the backend is concerned --
+  // nothing validates SKU format -- and would otherwise break this match,
+  // falling back to displaying the whole raw log line unparsed.
+  const LINE_PATTERN = /^\[(.+?)\]\s+(\S+)\s+sku=(.+?)\s+originalPrice=([\d.]+)\s+newPrice=([\d.]+)/;
 
   function parseLine(line) {
     const match = LINE_PATTERN.exec(line);
