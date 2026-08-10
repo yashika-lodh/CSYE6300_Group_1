@@ -33,9 +33,16 @@ public abstract class RepricingWorkflow {
 
     protected abstract List<DemandDataPoint> fetchDemandHistory(String sku);
 
-    /** Hook with a sensible default: any history at all counts as valid. Subclasses may tighten this. */
+    /**
+     * Hook with a sensible default: only a missing (null) history list is invalid.
+     * An empty list is valid too -- DemandForecaster.forecastTrend() already
+     * treats "no history yet" as STABLE, so a brand-new SKU with no demand
+     * signal still gets priced (from PricingInputsProvider's defaults) on its
+     * first reprice, instead of every channel silently staying unset. Subclasses
+     * may tighten this further.
+     */
     protected boolean validate(String sku, List<DemandDataPoint> demandHistory) {
-        return demandHistory != null && !demandHistory.isEmpty();
+        return demandHistory != null;
     }
 
     protected abstract PricingContext buildPricingContext(String sku, List<DemandDataPoint> demandHistory);
