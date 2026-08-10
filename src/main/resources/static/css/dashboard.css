@@ -233,6 +233,39 @@ button.secondary:hover {
 .trend-badge.FALLING { background: #fbeaea; color: var(--color-falling); }
 .trend-badge.STABLE { background: #eef0f2; color: var(--color-stable); }
 
+.onboarding-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.onboarding-form input {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 13px;
+  width: 150px;
+}
+
+.onboarding-form-secondary input {
+  width: 160px;
+}
+
+.form-status {
+  margin: 6px 0 0;
+  font-size: 13px;
+  min-height: 18px;
+}
+
+.form-status-ok {
+  color: var(--color-ok-text);
+}
+
+.form-status-error {
+  color: var(--color-danger-text);
+}
+
 .empty-row td {
   color: var(--color-muted);
   text-align: center;

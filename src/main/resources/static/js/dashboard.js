@@ -69,6 +69,7 @@ const Dashboard = (() => {
 
   async function init() {
     InventoryPanel.wireToolbar();
+    OnboardingPanel.wireToolbar();
     AuditPanel.wireToolbar();
     await refreshAll();
     startAutoRefresh();

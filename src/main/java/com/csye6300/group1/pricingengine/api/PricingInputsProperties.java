@@ -47,6 +47,32 @@ public class PricingInputsProperties {
     public Map<String, SkuOverrides> getSkus() { return skus; }
     public void setSkus(Map<String, SkuOverrides> skus) { this.skus = skus; }
 
+    /** Synchronized counterpart to upsertSkuOverride, so reads during a reprice don't race a concurrent write. */
+    public synchronized SkuOverrides getOverridesFor(String sku) {
+        return skus.get(sku);
+    }
+
+    /**
+     * Creates or updates a SKU's overrides at runtime (e.g. from the
+     * pricing-inputs REST endpoint), on top of whatever application.properties
+     * loaded at startup. Only non-null arguments are applied, so a partial
+     * update leaves the SKU's other fields (and the shared defaults) alone.
+     * Synchronized because this map may now be read by reprice requests and
+     * written by onboarding requests concurrently.
+     */
+    public synchronized SkuOverrides upsertSkuOverride(String sku, Double cost, Double currentPrice,
+                                                        Double competitorPrice, Integer daysInInventory,
+                                                        Double minPrice, Double maxPrice) {
+        SkuOverrides overrides = skus.computeIfAbsent(sku, k -> new SkuOverrides());
+        if (cost != null) overrides.setCost(cost);
+        if (currentPrice != null) overrides.setCurrentPrice(currentPrice);
+        if (competitorPrice != null) overrides.setCompetitorPrice(competitorPrice);
+        if (daysInInventory != null) overrides.setDaysInInventory(daysInInventory);
+        if (minPrice != null) overrides.setMinPrice(minPrice);
+        if (maxPrice != null) overrides.setMaxPrice(maxPrice);
+        return overrides;
+    }
+
     /** Per-SKU overrides; any field left null falls back to the matching default* value above. */
     public static class SkuOverrides {
         private Double cost;

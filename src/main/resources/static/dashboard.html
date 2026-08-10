@@ -24,6 +24,33 @@
 
   <main class="dashboard-grid">
 
+    <!-- Onboarding Panel -->
+    <section class="panel panel-wide" id="onboarding-panel">
+      <h2>Onboard / Configure SKU</h2>
+      <p class="panel-subtitle">
+        Set the pricing inputs <code>PricingStrategy</code> reads for a SKU —
+        cost, competitor price, current price, days in inventory, and
+        brand-positioning min/max guardrails — at runtime, no restart needed.
+        A brand-new SKU is seeded with a flat baseline demand history so it's
+        immediately priceable.
+      </p>
+      <div class="onboarding-form">
+        <input id="onboarding-sku-input" type="text" placeholder="SKU (e.g. SKU-3003)" />
+        <input id="onboarding-cost" type="number" step="0.01" placeholder="Cost" />
+        <input id="onboarding-current-price" type="number" step="0.01" placeholder="Current price" />
+        <input id="onboarding-competitor-price" type="number" step="0.01" placeholder="Competitor price" />
+        <input id="onboarding-days-in-inventory" type="number" placeholder="Days in inventory" />
+        <input id="onboarding-min-price" type="number" step="0.01" placeholder="Min price (guardrail)" />
+        <input id="onboarding-max-price" type="number" step="0.01" placeholder="Max price (guardrail)" />
+        <button id="onboarding-save-btn">Save Pricing Inputs</button>
+      </div>
+      <div class="onboarding-form onboarding-form-secondary">
+        <input id="onboarding-demand-units" type="number" placeholder="Units sold today" />
+        <button id="onboarding-record-demand-btn" class="secondary">Record Demand</button>
+      </div>
+      <p id="onboarding-status" class="form-status"></p>
+    </section>
+
     <!-- Inventory Panel -->
     <section class="panel" id="inventory-panel">
       <h2>Inventory</h2>
@@ -121,6 +148,7 @@
 
   <script src="js/api.js"></script>
   <script src="js/inventory-panel.js"></script>
+  <script src="js/onboarding-panel.js"></script>
   <script src="js/pricing-panel.js"></script>
   <script src="js/forecast-panel.js"></script>
   <script src="js/audit-panel.js"></script>
