@@ -22,10 +22,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -76,8 +76,15 @@ public class PricingEngineApplication {
 
     @Bean
     public Map<String, List<DemandDataPoint>> demandHistoryBySku() {
-        Map<String, List<DemandDataPoint>> demandHistory =
-                new HashMap<>(new DemandSignalRepository().loadDemandHistoryBySku());
+        // ConcurrentHashMap + CopyOnWriteArrayList (not the plain HashMap/ArrayList
+        // DemandSignalRepository hands back) because this bean is no longer read-only
+        // after startup: PricingInputsController and DemandController can add brand
+        // new SKUs or append demand points to existing ones while reprice requests are
+        // concurrently reading from the same map.
+        Map<String, List<DemandDataPoint>> demandHistory = new ConcurrentHashMap<>();
+        new DemandSignalRepository().loadDemandHistoryBySku()
+                .forEach((sku, points) -> demandHistory.put(sku, new CopyOnWriteArrayList<>(points)));
+
         if (demandHistory.isEmpty()) {
             // CSV missing or empty (e.g. running from an unusual working directory) --
             // fall back to the Milestone 2 sample data so the app still starts and demos cleanly.
@@ -148,7 +155,7 @@ public class PricingEngineApplication {
     }
 
     private static List<DemandDataPoint> buildSampleRisingDemand(String sku) {
-        List<DemandDataPoint> history = new ArrayList<>();
+        List<DemandDataPoint> history = new CopyOnWriteArrayList<>();
         LocalDate start = LocalDate.now().minusDays(30);
         for (int day = 0; day < 30; day++) {
             double units = day >= 23 ? 20 : 10;

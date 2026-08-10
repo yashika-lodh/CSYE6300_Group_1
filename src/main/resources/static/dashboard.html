@@ -41,6 +41,47 @@
 </div>
 
 <div class="panel">
+  <h2>Pricing Inputs (Add / Configure SKU)</h2>
+  <p class="status">Sets cost, competitor price, aging, and brand-positioning guardrails for a SKU. A SKU with no demand
+  history yet is seeded with a flat baseline here so it becomes priceable immediately.</p>
+  <div class="row">
+    <input id="inputsSku" placeholder="SKU (e.g. SKU-2003)" value="SKU-1001">
+    <button onclick="loadPricingInputs()">Load Current</button>
+    <button onclick="savePricingInputs()">Save</button>
+    <span id="inputsStatus" class="status"></span>
+  </div>
+  <div class="row">
+    <input id="inputCost" type="number" step="0.01" placeholder="Cost">
+    <input id="inputCurrentPrice" type="number" step="0.01" placeholder="Current Price">
+    <input id="inputCompetitorPrice" type="number" step="0.01" placeholder="Competitor Price">
+    <input id="inputDaysInInventory" type="number" placeholder="Days In Inventory">
+  </div>
+  <div class="row">
+    <input id="inputMinPrice" type="number" step="0.01" placeholder="Guardrail: Min Price">
+    <input id="inputMaxPrice" type="number" step="0.01" placeholder="Guardrail: Max Price">
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Demand History</h2>
+  <p class="status">Feeds the 7-day vs 30-day trend forecast (Strategy selection depends on this). Record enough of a
+  swing between recent and older days to flip the trend from STABLE to RISING/FALLING.</p>
+  <div class="row">
+    <input id="demandSku" placeholder="SKU (e.g. SKU-1001)" value="SKU-1001">
+    <input id="demandUnits" type="number" step="0.01" placeholder="Units sold">
+    <input id="demandDate" type="date">
+    <button onclick="recordDemand()">Record Demand</button>
+    <button onclick="loadDemand()">View History</button>
+    <span id="demandStatus" class="status"></span>
+  </div>
+  <p><strong>Current forecasted trend: </strong><span id="demandTrend">-</span></p>
+  <table id="demandTable">
+    <thead><tr><th>Date</th><th>Units</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div class="panel">
   <h2>Prices by Channel</h2>
   <div class="row">
     <input id="priceSku" placeholder="SKU (e.g. SKU-1001)" value="SKU-1001">
@@ -122,6 +163,102 @@
     } catch (e) {
       status.textContent = "Failed to adjust stock: " + e.message;
     }
+  }
+
+  async function loadPricingInputs() {
+    const sku = document.getElementById('inputsSku').value.trim();
+    const status = document.getElementById('inputsStatus');
+    if (!sku) { status.textContent = "Enter a SKU first."; return; }
+    status.textContent = "Loading...";
+    try {
+      const res = await fetch(`${API_BASE}/api/pricing-inputs/${encodeURIComponent(sku)}`);
+      const data = await res.json();
+      document.getElementById('inputCost').value = data.cost;
+      document.getElementById('inputCurrentPrice').value = data.currentPrice;
+      document.getElementById('inputCompetitorPrice').value = data.competitorPrice;
+      document.getElementById('inputDaysInInventory').value = data.daysInInventory;
+      document.getElementById('inputMinPrice').value = data.minPrice;
+      document.getElementById('inputMaxPrice').value = data.maxPrice;
+      status.textContent = `Loaded ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+      status.textContent = "Failed to load pricing inputs: " + e.message;
+    }
+  }
+
+  async function savePricingInputs() {
+    const sku = document.getElementById('inputsSku').value.trim();
+    const status = document.getElementById('inputsStatus');
+    if (!sku) { status.textContent = "Enter a SKU first."; return; }
+    status.textContent = "Saving...";
+    try {
+      const params = new URLSearchParams();
+      const fields = {
+        cost: 'inputCost',
+        currentPrice: 'inputCurrentPrice',
+        competitorPrice: 'inputCompetitorPrice',
+        daysInInventory: 'inputDaysInInventory',
+        minPrice: 'inputMinPrice',
+        maxPrice: 'inputMaxPrice',
+      };
+      // Only send fields the user actually filled in -- an empty box means
+      // "leave this one alone", not "set it to zero".
+      Object.entries(fields).forEach(([param, elementId]) => {
+        const value = document.getElementById(elementId).value;
+        if (value !== '') params.set(param, value);
+      });
+      await fetch(`${API_BASE}/api/pricing-inputs/${encodeURIComponent(sku)}?${params.toString()}`,
+          { method: 'PUT' });
+      document.getElementById('priceSku').value = sku;
+      document.getElementById('demandSku').value = sku;
+      await loadPricingInputs();
+      status.textContent = `Saved ${new Date().toLocaleTimeString()} (new SKUs are seeded with a flat demand baseline)`;
+    } catch (e) {
+      status.textContent = "Failed to save pricing inputs: " + e.message;
+    }
+  }
+
+  async function recordDemand() {
+    const sku = document.getElementById('demandSku').value.trim();
+    const units = document.getElementById('demandUnits').value;
+    const date = document.getElementById('demandDate').value;
+    const status = document.getElementById('demandStatus');
+    if (!sku || units === '') { status.textContent = "Enter a SKU and units."; return; }
+    status.textContent = "Recording...";
+    try {
+      const params = new URLSearchParams({ units });
+      if (date) params.set('date', date);
+      const res = await fetch(`${API_BASE}/api/demand/${encodeURIComponent(sku)}?${params.toString()}`,
+          { method: 'POST' });
+      renderDemand(await res.json());
+      status.textContent = `Recorded ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+      status.textContent = "Failed to record demand: " + e.message;
+    }
+  }
+
+  async function loadDemand() {
+    const sku = document.getElementById('demandSku').value.trim();
+    const status = document.getElementById('demandStatus');
+    if (!sku) { status.textContent = "Enter a SKU first."; return; }
+    status.textContent = "Loading...";
+    try {
+      const res = await fetch(`${API_BASE}/api/demand/${encodeURIComponent(sku)}`);
+      renderDemand(await res.json());
+      status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+      status.textContent = "Failed to load demand history: " + e.message;
+    }
+  }
+
+  function renderDemand(data) {
+    document.getElementById('demandTrend').textContent = data.trend;
+    const tbody = document.querySelector('#demandTable tbody');
+    tbody.innerHTML = '';
+    (data.points || []).forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${p.date}</td><td>${p.units}</td>`;
+      tbody.appendChild(tr);
+    });
   }
 
   async function loadPrices() {
