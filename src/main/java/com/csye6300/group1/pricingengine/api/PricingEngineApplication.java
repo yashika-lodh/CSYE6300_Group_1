@@ -15,8 +15,10 @@ import com.csye6300.group1.pricingengine.workflow.RepricingTriggerObserver;
 import com.csye6300.group1.pricingengine.workflow.RepricingWorkflow;
 import com.csye6300.group1.pricingengine.workflow.ScheduledRepricingWorkflow;
 import com.csye6300.group1.pricingengine.workflow.StandardRepricingWorkflow;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -152,6 +154,28 @@ public class PricingEngineApplication {
 
         workflow.startSchedule(demandHistoryBySku.keySet(), 0, 1, TimeUnit.HOURS);
         return workflow;
+    }
+
+    @Bean
+    public DemoDataSeeder demoDataSeeder(Inventory inventory,
+                                          PricingInputsProperties pricingInputsProperties,
+                                          Map<String, List<DemandDataPoint>> demandHistoryBySku,
+                                          RepricingWorkflow repricingWorkflow) {
+        return new DemoDataSeeder(inventory, pricingInputsProperties, demandHistoryBySku, repricingWorkflow);
+    }
+
+    /**
+     * Runs DemoDataSeeder once at startup so a presentation has a rich,
+     * non-overlapping Price History chart immediately -- gated behind
+     * demo.seed-data so it never fires during `mvn test` (the test
+     * classpath's application.properties omits the flag; @SpringBootTest
+     * boots this same context, and a real reprice loop with Thread.sleep in
+     * every test run would be unwanted noise and unwanted latency there).
+     */
+    @Bean
+    @ConditionalOnProperty(name = "demo.seed-data", havingValue = "true")
+    public CommandLineRunner demoDataStartupSeeder(DemoDataSeeder demoDataSeeder) {
+        return args -> demoDataSeeder.seed();
     }
 
     private static List<DemandDataPoint> buildSampleRisingDemand(String sku) {

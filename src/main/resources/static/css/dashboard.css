@@ -76,6 +76,13 @@ body {
   background: var(--color-panel);
 }
 
+.app-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .app-header h1 {
   margin: 0;
   font-size: 22px;

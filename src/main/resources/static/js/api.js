@@ -29,6 +29,8 @@
  *
  *   POST /api/demand/{sku}?units=&date= -> { sku, trend, points: [{date, units}, ...] }  (date optional, defaults to today)
  *   GET  /api/demand/{sku}              -> same shape, full recorded history
+ *
+ *   POST /api/demo/seed                 -> { seeded: [sku, ...] }  (re-seeds the mock SKU-DEMO-1..5 dataset)
  */
 
 const Api = (() => {
@@ -121,11 +123,17 @@ const Api = (() => {
     return request(`/api/demand/${encodeURIComponent(sku)}`);
   }
 
+  /** Re-seeds the mock SKU-DEMO-1..5 dataset. Returns { seeded: [sku, ...] }. Blocks a few seconds server-side (real staggered reprices), not a bug. */
+  function seedDemoData() {
+    return request(`/api/demo/seed`, { method: "POST" });
+  }
+
   return {
     getAllInventory, getInventory, adjustStock, setStock,
     getPrices, reprice, getForecast,
     getAuditReport, getAuditReportForSku,
     upsertPricingInputs, getPricingInputs,
     recordDemand, getDemandHistory,
+    seedDemoData,
   };
 })();

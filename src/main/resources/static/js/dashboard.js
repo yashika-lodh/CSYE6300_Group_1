@@ -69,16 +69,38 @@ const Dashboard = (() => {
     refreshTimer = setInterval(refreshAll, REFRESH_INTERVAL_MS);
   }
 
+  async function onSeedDemoDataClick(event) {
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.textContent = "Loading demo data…";
+    beginManualAction();
+    try {
+      // Real staggered reprices server-side (see DemoDataSeeder) -- this is
+      // expected to take a few seconds, not a stalled request.
+      const result = await Api.seedDemoData();
+      result.seeded.forEach((sku) => InventoryPanel.trackSku(sku));
+      await refreshAll();
+    } catch (err) {
+      console.error("Failed to load demo data", err);
+      showError(`Couldn't load demo data: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Load Demo Data";
+      endManualAction();
+    }
+  }
+
   async function init() {
     InventoryPanel.wireToolbar();
     OnboardingPanel.wireToolbar();
     AuditPanel.wireToolbar();
     PriceHistoryPanel.wireToolbar();
+    document.getElementById("seed-demo-data-btn").addEventListener("click", onSeedDemoDataClick);
     await refreshAll();
     startAutoRefresh();
   }
 
-  return { showError, init, beginManualAction, endManualAction };
+  return { showError, init, beginManualAction, endManualAction, refreshAll };
 })();
 
 window.Dashboard = Dashboard;
