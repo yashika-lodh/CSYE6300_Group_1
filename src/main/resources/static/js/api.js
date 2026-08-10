@@ -14,14 +14,13 @@
  *
  *   GET  /api/pricing/{sku}             -> { sku, prices: { [channel]: price } }
  *   POST /api/pricing/{sku}/reprice     -> { sku, prices: { [channel]: price } }
+ *   GET  /api/pricing/{sku}/forecast    -> { sku, trend, strategy }  (read-only, no reprice triggered)
  *
  *   GET  /api/audit                     -> string[]  (raw AuditLoggingCommandDecorator lines,
  *                                           e.g. "[2026-08-09T22:10:21.588Z] EXECUTE sku=SKU-1001
  *                                           originalPrice=24.99 newPrice=21.38")
  *   GET  /api/audit/{sku}               -> string[]  (same format, filtered to one SKU)
  *
- * Note: neither PricingController nor AuditController expose a demand trend
- * (RISING/FALLING/STABLE) over HTTP, so the dashboard does not display one.
  */
 
 const Api = (() => {
@@ -71,6 +70,11 @@ const Api = (() => {
     return request(`/api/pricing/${encodeURIComponent(sku)}/reprice`, { method: "POST" });
   }
 
+  /** Read-only trend + selected-strategy preview: { sku, trend, strategy }. */
+  function getForecast(sku) {
+    return request(`/api/pricing/${encodeURIComponent(sku)}/forecast`);
+  }
+
   /** Full audit trail as raw log-line strings. */
   function getAuditReport() {
     return request(`/api/audit`);
@@ -83,7 +87,7 @@ const Api = (() => {
 
   return {
     getAllInventory, getInventory, adjustStock, setStock,
-    getPrices, reprice,
+    getPrices, reprice, getForecast,
     getAuditReport, getAuditReportForSku,
   };
 })();

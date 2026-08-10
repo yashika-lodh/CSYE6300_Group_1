@@ -31,7 +31,20 @@ public abstract class RepricingWorkflow {
         log(sku, newPrice);
     }
 
+    /**
+     * Read-only preview of what a reprice would decide -- which Trend was
+     * detected and which PricingStrategy it maps to -- without executing any
+     * command or changing a price. Lets a dashboard show "why" a SKU would be
+     * repriced a certain way before (or instead of) actually triggering it.
+     */
+    public final ForecastInsight previewForecast(String sku) {
+        List<DemandDataPoint> demandHistory = fetchDemandHistory(sku);
+        return computeForecastInsight(demandHistory);
+    }
+
     protected abstract List<DemandDataPoint> fetchDemandHistory(String sku);
+
+    protected abstract ForecastInsight computeForecastInsight(List<DemandDataPoint> demandHistory);
 
     /**
      * Hook with a sensible default: only a missing (null) history list is invalid.

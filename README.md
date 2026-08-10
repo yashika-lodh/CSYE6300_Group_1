@@ -58,7 +58,8 @@ Direct-to-consumer (DTC) brands operating across multiple sales channels (Shopif
 - [x] `ShopifyApiClient` now picks `HttpGraphQLExecutor` or `MockGraphQLExecutor` automatically based on whether `SHOPIFY_SHOP_DOMAIN` / `SHOPIFY_ACCESS_TOKEN` are set (feature flag, zero changes needed at call sites)
 - [x] `ShopifyApiClientIntegrationTest` — real network test against a Shopify dev store, skipped by default so `mvn test` stays fast and credential-free for every teammate and for grading
 - [x] `DemandSignalRepository` — loads real demand history from `data/demand_signals.csv` (previously present but never read); `PricingEngineApplication` now uses it, falling back to Milestone 2 sample data only if the CSV is missing
-- [x] `dashboard.html` — lightweight static dashboard (served at `/dashboard.html`) showing live inventory, per-channel prices, and the audit trail via the existing REST endpoints
+- [x] `dashboard.html` — live operational dashboard (served at `/dashboard.html`) showing inventory, per-channel prices, demand forecast/strategy, and the audit trail via the existing REST endpoints
+- [x] `index.html` — landing/architecture page (served at `/`) with the problem statement, UML diagram, and a walkthrough of all 9 design patterns
 
 ## 8. Functionalities Planned for Final Submission
 - [ ] Additional SalesChannel implementations — own website and social commerce — behind the existing Factory Method (in progress on branch `channels-integration`)
@@ -90,8 +91,9 @@ With both set, `ShopifyApiClient` automatically uses `HttpGraphQLExecutor`
 instead of the mock.
 
 With the Spring Boot app running (`mvn spring-boot:run`), open
-`http://localhost:8080/dashboard.html` in a browser to view live inventory,
-per-channel prices, and the audit trail.
+`http://localhost:8080/` for the landing/architecture page, or
+`http://localhost:8080/dashboard.html` directly to view live inventory,
+per-channel prices, demand forecast, and the audit trail.
 
 ## 10. Team Contributions
 

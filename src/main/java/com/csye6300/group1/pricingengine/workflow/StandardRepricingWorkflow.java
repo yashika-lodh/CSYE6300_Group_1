@@ -66,7 +66,16 @@ public class StandardRepricingWorkflow extends RepricingWorkflow {
                 inputsProvider.getCurrentPrice(sku),
                 inputsProvider.getCompetitorPrice(sku),
                 inputsProvider.getDaysInInventory(sku),
-                inventory.getStock(sku));
+                inventory.getStock(sku),
+                inputsProvider.getMinPrice(sku),
+                inputsProvider.getMaxPrice(sku));
+    }
+
+    @Override
+    protected ForecastInsight computeForecastInsight(List<DemandDataPoint> demandHistory) {
+        Trend trend = forecaster.forecastTrend(demandHistory);
+        PricingStrategy strategy = strategySelector.selectStrategy(trend);
+        return new ForecastInsight(trend.name(), strategy.getName());
     }
 
     @Override

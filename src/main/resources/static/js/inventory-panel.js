@@ -74,10 +74,13 @@ const InventoryPanel = (() => {
     try {
       await Api.adjustStock(sku, delta);
       // Stock change may have triggered a reprice on the backend (Observer
-      // pattern) — refresh both panels so the dashboard reflects it.
+      // pattern) — refresh every panel so the dashboard reflects it.
       await render();
       if (window.PricingPanel) {
         await window.PricingPanel.render();
+      }
+      if (window.ForecastPanel) {
+        await window.ForecastPanel.render();
       }
     } catch (err) {
       console.error("Failed to adjust stock for", sku, err);
@@ -102,6 +105,9 @@ const InventoryPanel = (() => {
         await render();
         if (window.PricingPanel) {
           await window.PricingPanel.render();
+        }
+        if (window.ForecastPanel) {
+          await window.ForecastPanel.render();
         }
       } finally {
         Dashboard.endManualAction();
