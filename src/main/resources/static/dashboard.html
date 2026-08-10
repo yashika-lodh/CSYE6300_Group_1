@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dynamic Pricing Engine — Dashboard</title>
   <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/chart.css" />
 </head>
 <body>
 
@@ -116,6 +117,22 @@
       </table>
     </section>
 
+    <!-- Price History Panel -->
+    <section class="panel panel-wide" id="price-history-panel">
+      <div class="panel-header-row">
+        <h2>Price History</h2>
+        <div class="audit-toolbar">
+          <button id="price-history-toggle-btn" class="secondary">View as table</button>
+        </div>
+      </div>
+      <p class="panel-subtitle">
+        Every price change logged by <code>AuditLoggingCommandDecorator</code>,
+        plotted per SKU over time. A price only changes when a reprice is
+        logged, so each line is a step, not a trend line.
+      </p>
+      <div id="price-history-body"></div>
+    </section>
+
     <!-- Demand Forecast Panel -->
     <section class="panel panel-wide" id="forecast-panel">
       <h2>Demand Forecast</h2>
@@ -179,6 +196,7 @@
   <script src="js/guardrails-panel.js"></script>
   <script src="js/forecast-panel.js"></script>
   <script src="js/audit-panel.js"></script>
+  <script src="js/price-history-panel.js"></script>
   <script src="js/dashboard.js"></script>
 </body>
 </html>

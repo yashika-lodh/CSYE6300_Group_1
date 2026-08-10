@@ -98,7 +98,7 @@ const AuditPanel = (() => {
     document.getElementById("audit-sku-filter").addEventListener("change", render);
   }
 
-  return { render, wireToolbar };
+  return { render, wireToolbar, parseLine };
 })();
 
 window.AuditPanel = AuditPanel;

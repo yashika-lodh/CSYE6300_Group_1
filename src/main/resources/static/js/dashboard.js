@@ -59,6 +59,7 @@ const Dashboard = (() => {
       GuardrailsPanel.render(),
       ForecastPanel.render(),
       AuditPanel.render(),
+      PriceHistoryPanel.render(),
     ]);
     setLastUpdated();
   }
@@ -72,6 +73,7 @@ const Dashboard = (() => {
     InventoryPanel.wireToolbar();
     OnboardingPanel.wireToolbar();
     AuditPanel.wireToolbar();
+    PriceHistoryPanel.wireToolbar();
     await refreshAll();
     startAutoRefresh();
   }
