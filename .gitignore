@@ -4,6 +4,7 @@ target/
 # H2 file-backed database created at runtime by InventoryRepository (Milestone 3)
 data/pricingdb.mv.db
 data/pricingdb.trace.db
+data/pricingdb.lock.db
 
 .DS_Store
 .idea/
