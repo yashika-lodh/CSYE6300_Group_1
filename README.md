@@ -11,7 +11,326 @@ Direct-to-consumer (DTC) brands operating across multiple sales channels (Shopif
 
 ## 4. UML Diagram
 
-![UML Diagram](media/uml_diagram.png)
+```mermaid
+classDiagram
+    %% ===================== PRICING (Strategy) =====================
+    class PricingContext {
+        -sku String
+        -cost double
+        -currentPrice double
+        -competitorPrice double
+        -daysInInventory int
+        -unitsInStock int
+        -minPrice double
+        -maxPrice double
+        +applyGuardrails(price double) double
+        +hasMinPrice() boolean
+        +hasMaxPrice() boolean
+    }
+
+    class PricingStrategy {
+        <<interface>>
+        +calculatePrice(context PricingContext) double
+        +getName() String
+    }
+    class CostPlusMarkupStrategy {
+        -markupPercentage double
+        +calculatePrice(context PricingContext) double
+    }
+    class CompetitorAwarePricingStrategy {
+        -undercutPercentage double
+        +calculatePrice(context PricingContext) double
+    }
+    class InventoryAgingStrategy {
+        -DAYS_THRESHOLD int
+        -MAX_DISCOUNT double
+        +calculatePrice(context PricingContext) double
+    }
+
+    PricingStrategy <|.. CostPlusMarkupStrategy
+    PricingStrategy <|.. CompetitorAwarePricingStrategy
+    PricingStrategy <|.. InventoryAgingStrategy
+    PricingStrategy ..> PricingContext : uses
+
+    class PricingStrategySelector {
+        -risingStrategy PricingStrategy
+        -stableStrategy PricingStrategy
+        -fallingStrategy PricingStrategy
+        +selectStrategy(trend Trend) PricingStrategy
+    }
+    PricingStrategySelector o-- PricingStrategy
+    PricingStrategySelector ..> Trend
+
+    %% ===================== COMMAND (+ Decorator) =====================
+    class PriceReceiver {
+        <<interface>>
+        +setPrice(sku String, price double)
+        +getPrice(sku String) double
+    }
+    class PricingCommand {
+        <<interface>>
+        +execute()
+        +undo()
+        +getSku() String
+        +getOriginalPrice() double
+        +getNewPrice() double
+    }
+    class UpdatePriceCommand {
+        -receiver PriceReceiver
+        -sku String
+        -originalPrice double
+        -newPrice double
+        +execute()
+        +undo()
+    }
+    class AuditLoggingCommandDecorator {
+        -wrapped PricingCommand
+        -auditTrail List~String~
+        -GLOBAL_AUDIT_TRAIL List~String~
+        +execute()
+        +undo()
+        +generateAuditReport() List~String~
+        +getGlobalAuditTrail() List~String~
+    }
+    class PricingCommandInvoker {
+        -undoStack Deque~PricingCommand~
+        -redoStack Deque~PricingCommand~
+        +executeCommand(command PricingCommand)
+        +undo() boolean
+        +redo() boolean
+        +historySize() int
+    }
+
+    PricingCommand <|.. UpdatePriceCommand
+    PricingCommand <|.. AuditLoggingCommandDecorator
+    UpdatePriceCommand --> PriceReceiver
+    AuditLoggingCommandDecorator o-- PricingCommand : wraps
+    PricingCommandInvoker o-- PricingCommand
+
+    %% ===================== CHANNEL (Factory Method) =====================
+    class SalesChannel {
+        <<interface>>
+        +getName() String
+        +getInventory() Inventory
+        +publishPrice(sku String)
+    }
+    PriceReceiver <|-- SalesChannel
+
+    class ShopifyChannel {
+        -apiClient ShopifyApiClient
+        -inventory Inventory
+        -localPriceCache Map~String,Double~
+        +publishPrice(sku String)
+    }
+    class OwnWebsiteChannel {
+        -inventory Inventory
+        -priceBook Map~String,Double~
+        +publishPrice(sku String)
+    }
+    class SocialCommerceChannel {
+        -inventory Inventory
+        -priceBook Map~String,Double~
+        +publishPrice(sku String)
+    }
+    SalesChannel <|.. ShopifyChannel
+    SalesChannel <|.. OwnWebsiteChannel
+    SalesChannel <|.. SocialCommerceChannel
+    ShopifyChannel --> ShopifyApiClient
+    ShopifyChannel --> Inventory
+    OwnWebsiteChannel --> Inventory
+    SocialCommerceChannel --> Inventory
+
+    class SalesChannelFactory {
+        <<enumeration>> ChannelType
+        +createChannel(type ChannelType) SalesChannel
+    }
+    SalesChannelFactory ..> ShopifyChannel : creates
+    SalesChannelFactory ..> OwnWebsiteChannel : creates
+    SalesChannelFactory ..> SocialCommerceChannel : creates
+
+    class ChannelManager {
+        -channels List~SalesChannel~
+        +registerChannel(channel SalesChannel)
+        +updatePricesAcrossChannels(sku String, price double)
+    }
+    ChannelManager o-- SalesChannel
+
+    %% ===================== INVENTORY (Singleton + Observer) =====================
+    class Inventory {
+        <<Singleton>>
+        -instance Inventory
+        -stock Map~String,Integer~
+        -observers List~InventoryObserver~
+        +getInstance() Inventory
+        +updateStock(sku String, newQuantity int)
+        +adjustStock(sku String, delta int)
+        +getStock(sku String) int
+        +loadFromRepository(repository InventoryRepository)
+        +addObserver(observer InventoryObserver)
+    }
+    class InventoryObserver {
+        <<interface>>
+        +onStockChanged(event StockChangeEvent)
+    }
+    class InventoryPersistenceObserver {
+        -repository InventoryRepository
+        +onStockChanged(event StockChangeEvent)
+    }
+    class InventoryRepository {
+        -emf EntityManagerFactory
+        +upsertStock(sku String, quantity int)
+        +findStock(sku String) int
+        +findAll() Map~String,Integer~
+    }
+    class InventoryEntity {
+        -sku String
+        -quantity int
+    }
+    class StockChangeEvent {
+        -sku String
+        -previousQuantity int
+        -newQuantity int
+        +getDelta() int
+    }
+
+    Inventory o-- InventoryObserver : notifies
+    Inventory ..> StockChangeEvent : creates
+    Inventory --> InventoryRepository : loads from
+    InventoryObserver <|.. InventoryPersistenceObserver
+    InventoryPersistenceObserver --> InventoryRepository
+    InventoryRepository --> InventoryEntity
+
+    %% ===================== FORECAST (Adapter) =====================
+    class DemandDataPoint {
+        -sku String
+        -date LocalDate
+        -unitsSold double
+    }
+    class RawDemandSignal {
+        -productCode String
+        -isoDate String
+        -orderCount int
+        -avgUnitsPerOrder int
+    }
+    class DemandSignalAdapter {
+        +adapt(raw RawDemandSignal) DemandDataPoint
+    }
+    class DemandSignalRepository {
+        -csvPath Path
+        -adapter DemandSignalAdapter
+        +loadDemandHistoryBySku() Map~String,List~DemandDataPoint~~
+    }
+    class DemandForecaster {
+        -SHORT_WINDOW int
+        -LONG_WINDOW int
+        +movingAverage(history List~DemandDataPoint~, windowSize int) double
+        +forecastTrend(history List~DemandDataPoint~) Trend
+    }
+    class Trend {
+        <<enumeration>>
+        RISING
+        FALLING
+        STABLE
+    }
+
+    DemandSignalAdapter ..> RawDemandSignal
+    DemandSignalAdapter ..> DemandDataPoint : creates
+    DemandSignalRepository --> DemandSignalAdapter
+    DemandSignalRepository ..> DemandDataPoint
+    DemandForecaster ..> DemandDataPoint
+    DemandForecaster ..> Trend : returns
+
+    %% ===================== WORKFLOW (Template Method + Observer) =====================
+    class PricingInputsProvider {
+        <<interface>>
+        +getCost(sku String) double
+        +getCurrentPrice(sku String) double
+        +getCompetitorPrice(sku String) double
+        +getDaysInInventory(sku String) int
+        +getMinPrice(sku String) double
+        +getMaxPrice(sku String) double
+    }
+    class ForecastInsight {
+        <<record>>
+        +trend String
+        +strategyName String
+    }
+    class RepricingWorkflow {
+        <<abstract>>
+        +reprice(sku String) void
+        +previewForecast(sku String) ForecastInsight
+        #fetchDemandHistory(sku String) List~DemandDataPoint~
+        #computeForecastInsight(demandHistory List~DemandDataPoint~) ForecastInsight
+        #validate(sku String, demandHistory List~DemandDataPoint~) boolean
+        #buildPricingContext(sku String, demandHistory List~DemandDataPoint~) PricingContext
+        #execute(sku String, context PricingContext, demandHistory List~DemandDataPoint~) double
+    }
+    class StandardRepricingWorkflow {
+        -demandHistoryBySku Map~String,List~DemandDataPoint~~
+        -inputsProvider PricingInputsProvider
+        -forecaster DemandForecaster
+        -strategySelector PricingStrategySelector
+        -channelManager ChannelManager
+        -invoker PricingCommandInvoker
+        -inventory Inventory
+    }
+    class ScheduledRepricingWorkflow {
+        -scheduler ScheduledExecutorService
+        +startSchedule(skus Collection~String~, initialDelay long, period long, unit TimeUnit)
+        +stopSchedule()
+    }
+    class RepricingTriggerObserver {
+        -workflow RepricingWorkflow
+        +onStockChanged(event StockChangeEvent)
+    }
+
+    RepricingWorkflow <|-- StandardRepricingWorkflow
+    StandardRepricingWorkflow <|-- ScheduledRepricingWorkflow
+    RepricingWorkflow ..> ForecastInsight
+    RepricingWorkflow ..> PricingContext
+    StandardRepricingWorkflow --> PricingInputsProvider
+    StandardRepricingWorkflow --> DemandForecaster
+    StandardRepricingWorkflow --> PricingStrategySelector
+    StandardRepricingWorkflow --> ChannelManager
+    StandardRepricingWorkflow --> PricingCommandInvoker
+    StandardRepricingWorkflow --> Inventory
+    StandardRepricingWorkflow ..> UpdatePriceCommand : creates
+    StandardRepricingWorkflow ..> AuditLoggingCommandDecorator : creates
+    InventoryObserver <|.. RepricingTriggerObserver
+    RepricingTriggerObserver --> RepricingWorkflow
+
+    %% ===================== SHOPIFY (Adapter/Gateway) =====================
+    class GraphQLExecutor {
+        <<interface>>
+        +execute(query String) String
+    }
+    class HttpGraphQLExecutor {
+        -shopDomain String
+        -accessToken String
+        -httpClient HttpClient
+        +execute(query String) String
+    }
+    class MockGraphQLExecutor {
+        -products Map~String,ShopifyProduct~
+        +execute(query String) String
+    }
+    class ShopifyApiClient {
+        -executor GraphQLExecutor
+        -cache Map~String,ShopifyProduct~
+        +fetchProduct(sku String) ShopifyProduct
+        +updatePrice(sku String, newPrice double) boolean
+    }
+    class ShopifyProduct {
+        -sku String
+        -price double
+        -inventoryQuantity int
+    }
+
+    GraphQLExecutor <|.. HttpGraphQLExecutor
+    GraphQLExecutor <|.. MockGraphQLExecutor
+    ShopifyApiClient --> GraphQLExecutor
+    ShopifyApiClient ..> ShopifyProduct : creates
+```
 
 ## 5. Design Patterns Implemented
 
