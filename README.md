@@ -11,11 +11,6 @@ Direct-to-consumer (DTC) brands operating across multiple sales channels (Shopif
 
 ## 4. UML Diagram
 
-![UML Diagram](media/uml_diagram.png)
-
-<details>
-<summary>Detailed class diagram (Mermaid)</summary>
-
 ```mermaid
 classDiagram
     %% ===================== PRICING (Strategy) =====================
@@ -336,8 +331,6 @@ classDiagram
     ShopifyApiClient --> GraphQLExecutor
     ShopifyApiClient ..> ShopifyProduct : creates
 ```
-
-</details>
 
 ## 5. Design Patterns Implemented
 
