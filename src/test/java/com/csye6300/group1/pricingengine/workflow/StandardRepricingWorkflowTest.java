@@ -1,5 +1,6 @@
 package com.csye6300.group1.pricingengine.workflow;
 
+import com.csye6300.group1.pricingengine.audit.AuditLoggingCommandDecorator;
 import com.csye6300.group1.pricingengine.channel.ChannelManager;
 import com.csye6300.group1.pricingengine.channel.SalesChannel;
 import com.csye6300.group1.pricingengine.command.PricingCommandInvoker;
@@ -97,12 +98,54 @@ class StandardRepricingWorkflowTest {
                 "Configured min-price guardrail should clamp the strategy's raw output");
     }
 
+    @Test
+    void repriceLogsOneAuditEntryPerChannel() {
+        String sku = "SKU-AUDIT-PER-CHANNEL";
+        Inventory.getInstance().updateStock(sku, 10);
+
+        ChannelManager channelManager = new ChannelManager();
+        channelManager.registerChannel(new RecordingFakeChannel("Shopify"));
+        channelManager.registerChannel(new RecordingFakeChannel("OwnWebsite"));
+        channelManager.registerChannel(new RecordingFakeChannel("SocialCommerce"));
+
+        workflow = new StandardRepricingWorkflow(
+                Map.of(sku, List.<DemandDataPoint>of()),
+                new PricingInputsProvider() {
+                    @Override public double getCost(String s) { return 10.0; }
+                    @Override public double getCurrentPrice(String s) { return 15.0; }
+                    @Override public double getCompetitorPrice(String s) { return 14.0; }
+                    @Override public int getDaysInInventory(String s) { return 5; }
+                },
+                new DemandForecaster(),
+                new PricingStrategySelector(),
+                channelManager,
+                new PricingCommandInvoker());
+
+        workflow.reprice(sku);
+
+        long entriesForSku = AuditLoggingCommandDecorator.getGlobalAuditTrail().stream()
+                .filter(entry -> entry.contains("sku=" + sku + " "))
+                .count();
+
+        assertEquals(3, entriesForSku,
+                "Every channel's price change should get its own compliance-log entry, not one entry per reprice");
+    }
+
     private static class RecordingFakeChannel implements SalesChannel {
+        private final String name;
         private final Map<String, Double> prices = new ConcurrentHashMap<>();
+
+        RecordingFakeChannel() {
+            this("fake");
+        }
+
+        RecordingFakeChannel(String name) {
+            this.name = name;
+        }
 
         @Override
         public String getName() {
-            return "fake";
+            return name;
         }
 
         @Override
