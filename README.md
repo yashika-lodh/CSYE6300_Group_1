@@ -353,7 +353,7 @@ classDiagram
 - **Persistence**: Hibernate/JPA + H2 (file-backed database, new in Milestone 3 — replaces the Milestone 2 CSV files for inventory)
 - **IDE**: Eclipse or VS Code with Java extensions
 - **Version Control**: Git + GitHub (private repo)
-- **Testing**: JUnit 5 (Jupiter), Spring Boot Test (`@SpringBootTest` + `TestRestTemplate` for API integration tests)
+- **Testing**: JUnit 5 (Jupiter), Spring Boot Test (`@SpringBootTest` + `TestRestTemplate` for API integration tests) — 46 tests, 0 failures across the suite
 - **Logging**: SLF4J + Logback
 - **External Integration**: Shopify Admin GraphQL API via `ShopifyApiClient`. Defaults to `MockGraphQLExecutor` for credential-free testing; automatically switches to the real `HttpGraphQLExecutor` transport when `SHOPIFY_SHOP_DOMAIN` and `SHOPIFY_ACCESS_TOKEN` environment variables are set
 
@@ -369,15 +369,19 @@ classDiagram
 ### Spring Boot REST API Layer
 - [x] `PricingEngineApplication` — Spring Boot entry point wiring up the exact same engine graph as the console demo (Singleton Inventory, Factory-built channels, Strategy/Selector, Command/Decorator, Template Method workflow, Observer)
 - [x] `InventoryController` (`/api/inventory`) — view and adjust stock levels over HTTP
-- [x] `PricingController` (`/api/pricing`) — trigger a repricing cycle and read current per-channel prices
+- [x] `PricingController` (`/api/pricing`) — `POST /{sku}/reprice`, `POST /{sku}/undo`, `GET /{sku}`, `GET /{sku}/forecast`, `GET /scheduled-status`
 - [x] `AuditController` (`/api/audit`) — audit-report endpoint exposing the Decorator's full compliance log, across every command the engine has ever run
+- [x] `PricingInputsController` (`/api/pricing-inputs/{sku}`) — runtime SKU onboarding: `GET`/`PUT` cost, competitor price, current price, days-in-inventory, and brand-positioning min/max guardrails, no restart required
+- [x] `DemandController` (`/api/demand/{sku}`) — `GET`/`POST` to record real demand interactively for a SKU
+- [x] `DemoDataController` / `DemoDataSeeder` (`POST /api/demo/seed`) — seeds sample SKUs so the dashboard is populated for a fresh demo run
+- [x] `SystemStatusController` (`/api/system/status`) — persistence-on and server-uptime proof, surfaced on the dashboard header
 
 ### Real Shopify Integration & Dashboard
 - [x] `HttpGraphQLExecutor` — real, non-mocked `GraphQLExecutor` implementation that sends queries/mutations to Shopify's Admin GraphQL API over HTTPS
 - [x] `ShopifyApiClient` now picks `HttpGraphQLExecutor` or `MockGraphQLExecutor` automatically based on whether `SHOPIFY_SHOP_DOMAIN` / `SHOPIFY_ACCESS_TOKEN` are set (feature flag, zero changes needed at call sites)
 - [x] `ShopifyApiClientIntegrationTest` — real network test against a Shopify dev store, skipped by default so `mvn test` stays fast and credential-free for every teammate and for grading
 - [x] `DemandSignalRepository` — loads real demand history from `data/demand_signals.csv` (previously present but never read); `PricingEngineApplication` now uses it, falling back to Milestone 2 sample data only if the CSV is missing
-- [x] `dashboard.html` — live operational dashboard (served at `/dashboard.html`) showing inventory, per-channel prices, demand forecast/strategy, and the audit trail via the existing REST endpoints
+- [x] `dashboard.html` — live operational dashboard (served at `/dashboard.html`) with seven panels: Onboarding/Configure SKU, Inventory, Pricing (with Reprice/Undo actions), Brand-Positioning Guardrails, Price History (charted per SKU), Demand Forecast (trend + selected strategy), and Audit Log (with a Trigger column showing which subscriber — manual or scheduled — fired each entry); header shows live `System Status` (persistence + uptime)
 - [x] `index.html` — landing/architecture page (served at `/`) with the problem statement, UML diagram, and a walkthrough of all 9 design patterns
 
 ### Additional Channels & Guardrails (completed for Final Submission)
@@ -422,7 +426,8 @@ instead of the mock.
 With the Spring Boot app running (`mvn spring-boot:run`), open
 `http://localhost:8080/` for the landing/architecture page, or
 `http://localhost:8080/dashboard.html` directly to view live inventory,
-per-channel prices, demand forecast, and the audit trail.
+onboarding, guardrails, pricing (with reprice/undo), demand forecast,
+charted price history, the audit trail, and system status.
 
 ## 10. Team Contributions
 
