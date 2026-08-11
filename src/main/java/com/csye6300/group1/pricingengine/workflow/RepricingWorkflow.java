@@ -16,19 +16,42 @@ public abstract class RepricingWorkflow {
 
     protected final Logger logger = Logger.getLogger(getClass().getName());
 
-    /** The template method. Marked final so the overall sequence can't be reordered by subclasses. */
+    /** What triggered the reprice currently running on this thread (MANUAL/AUTO/SCHEDULED/...),
+     * visible to subclasses via currentSource() while execute() runs. A ThreadLocal because this
+     * workflow is a shared singleton bean that can be invoked concurrently by different triggers
+     * (e.g. a manual API reprice on one request thread while an Observer-triggered auto-reprice
+     * for a different SKU runs on another) -- a plain field would let one call's source leak into
+     * another's audit entry. */
+    private final ThreadLocal<String> currentSource = ThreadLocal.withInitial(() -> "MANUAL");
+
+    /** The template method, defaulting to a MANUAL source. Marked final so the overall sequence can't be reordered by subclasses. */
     public final void reprice(String sku) {
-        List<DemandDataPoint> demandHistory = fetchDemandHistory(sku);
+        reprice(sku, "MANUAL");
+    }
 
-        if (!validate(sku, demandHistory)) {
-            logger.warning("Validation failed for " + sku + "; skipping reprice.");
-            return;
+    /** Same template method, tagged with an explicit source (e.g. "AUTO" for an Observer-triggered reprice). */
+    public final void reprice(String sku, String source) {
+        currentSource.set(source);
+        try {
+            List<DemandDataPoint> demandHistory = fetchDemandHistory(sku);
+
+            if (!validate(sku, demandHistory)) {
+                logger.warning("Validation failed for " + sku + "; skipping reprice.");
+                return;
+            }
+
+            PricingContext context = buildPricingContext(sku, demandHistory);
+            double newPrice = execute(sku, context, demandHistory);
+
+            log(sku, newPrice);
+        } finally {
+            currentSource.remove();
         }
+    }
 
-        PricingContext context = buildPricingContext(sku, demandHistory);
-        double newPrice = execute(sku, context, demandHistory);
-
-        log(sku, newPrice);
+    /** The source tag for the reprice currently executing on this thread. Only meaningful while execute() runs. */
+    protected String currentSource() {
+        return currentSource.get();
     }
 
     /**

@@ -41,6 +41,36 @@ const Dashboard = (() => {
       `Last updated: ${new Date().toLocaleTimeString()}`;
   }
 
+  /** Fetched once on load, not on the 10s refresh -- persistence and server start time never change while the page is open. */
+  async function loadSystemStatus() {
+    const line = document.getElementById("system-status-line");
+    try {
+      const status = await Api.getSystemStatus();
+      const persistence = status.persistenceEnabled ? "ON" : "OFF";
+      const startedAt = new Date(status.serverStartedAt).toLocaleString();
+      line.textContent = `Persistence: ${persistence} · Server running since ${startedAt}`;
+    } catch (err) {
+      console.error("Failed to load system status", err);
+      line.textContent = "Persistence: unknown · Server status unavailable";
+    }
+  }
+
+  /** Refreshed every 10s cycle, unlike system status -- the sweep's lastRunAt/nextRunAt change over time. */
+  async function loadScheduledStatus() {
+    const line = document.getElementById("scheduled-status-line");
+    try {
+      const status = await Api.getScheduledStatus();
+      const state = status.active ? "ON" : "OFF";
+      const skuList = status.skus && status.skus.length ? status.skus.join(", ") : "no SKUs";
+      const lastRun = status.lastRunAt ? new Date(status.lastRunAt).toLocaleTimeString() : "never";
+      const nextRun = status.nextRunAt ? new Date(status.nextRunAt).toLocaleTimeString() : "—";
+      line.textContent = `Scheduled repricing: ${state} (${skuList}) · last run ${lastRun} · next run ${nextRun}`;
+    } catch (err) {
+      console.error("Failed to load scheduled status", err);
+      line.textContent = "Scheduled repricing: unavailable";
+    }
+  }
+
   async function refreshAll() {
     if (manualActionsInFlight > 0) {
       // A manual reprice/adjust is running its own render() right now --
@@ -60,6 +90,7 @@ const Dashboard = (() => {
       ForecastPanel.render(),
       AuditPanel.render(),
       PriceHistoryPanel.render(),
+      loadScheduledStatus(),
     ]);
     setLastUpdated();
   }
@@ -96,6 +127,7 @@ const Dashboard = (() => {
     AuditPanel.wireToolbar();
     PriceHistoryPanel.wireToolbar();
     document.getElementById("seed-demo-data-btn").addEventListener("click", onSeedDemoDataClick);
+    await loadSystemStatus();
     await refreshAll();
     startAutoRefresh();
   }

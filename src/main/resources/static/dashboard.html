@@ -22,6 +22,7 @@
       <div>
         <h1>Dynamic Pricing Engine</h1>
         <p class="subtitle">Multi-Channel DTC Retail — Live Dashboard</p>
+        <p class="system-status-line" id="system-status-line">Persistence: — · Server running since —</p>
       </div>
       <button id="seed-demo-data-btn" class="secondary">Load Demo Data</button>
     </div>
@@ -179,6 +180,7 @@
             <th>Timestamp</th>
             <th>Action</th>
             <th>SKU</th>
+            <th>Trigger</th>
             <th>Original Price</th>
             <th>New Price</th>
           </tr>
@@ -193,6 +195,8 @@
 
   <footer class="app-footer">
     <span id="last-updated">Not yet loaded</span>
+    <span class="footer-sep">·</span>
+    <span id="scheduled-status-line">Scheduled repricing: —</span>
   </footer>
 
   <script src="js/api.js"></script>

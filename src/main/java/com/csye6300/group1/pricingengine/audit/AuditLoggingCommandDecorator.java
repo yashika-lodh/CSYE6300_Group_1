@@ -25,8 +25,17 @@ public class AuditLoggingCommandDecorator implements PricingCommand {
     // history of a single command.
     private static final List<String> GLOBAL_AUDIT_TRAIL = new CopyOnWriteArrayList<>();
 
+    private final String source;
+
+    /** Defaults the source to "MANUAL" for existing callers that don't care about tagging it. */
     public AuditLoggingCommandDecorator(PricingCommand wrapped) {
+        this(wrapped, "MANUAL");
+    }
+
+    /** @param source what triggered this command, e.g. "MANUAL", "AUTO" (Observer-triggered), "SCHEDULED". */
+    public AuditLoggingCommandDecorator(PricingCommand wrapped, String source) {
         this.wrapped = wrapped;
+        this.source = source;
     }
 
     @Override
@@ -42,8 +51,8 @@ public class AuditLoggingCommandDecorator implements PricingCommand {
     }
 
     private void record(String action) {
-        String entry = String.format("[%s] %s sku=%s originalPrice=%.2f newPrice=%.2f",
-                Instant.now(), action, wrapped.getSku(), wrapped.getOriginalPrice(), wrapped.getNewPrice());
+        String entry = String.format("[%s] %s sku=%s source=%s originalPrice=%.2f newPrice=%.2f",
+                Instant.now(), action, wrapped.getSku(), source, wrapped.getOriginalPrice(), wrapped.getNewPrice());
         auditTrail.add(entry);
         GLOBAL_AUDIT_TRAIL.add(entry);
         logger.info(entry);
