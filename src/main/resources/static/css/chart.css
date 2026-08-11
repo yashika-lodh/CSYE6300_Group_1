@@ -61,6 +61,7 @@
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
+  transition: stroke-width 0.1s ease, opacity 0.1s ease;
 }
 
 .chart-svg .series-marker {
@@ -107,13 +108,14 @@
   pointer-events: none;
   background: var(--text-primary);
   color: #fff;
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-radius: 8px;
+  padding: 9px 12px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
   transform: translate(-50%, -100%);
   white-space: nowrap;
   z-index: 5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
 
 .chart-tooltip-row {

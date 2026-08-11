@@ -50,8 +50,9 @@ public class PricingInputsController {
                                        @RequestParam(required = false) Double competitorPrice,
                                        @RequestParam(required = false) Integer daysInInventory,
                                        @RequestParam(required = false) Double minPrice,
-                                       @RequestParam(required = false) Double maxPrice) {
-        properties.upsertSkuOverride(sku, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice);
+                                       @RequestParam(required = false) Double maxPrice,
+                                       @RequestParam(required = false) String name) {
+        properties.upsertSkuOverride(sku, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice, name);
 
         // A SKU priced for the first time needs demand history to pass the
         // workflow's validate() step; seed a flat (STABLE-trend) baseline so
@@ -69,6 +70,7 @@ public class PricingInputsController {
     private Map<String, Object> effectiveInputs(String sku) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("sku", sku);
+        result.put("name", properties.getName(sku));
         result.put("cost", pricingInputsProvider.getCost(sku));
         result.put("currentPrice", pricingInputsProvider.getCurrentPrice(sku));
         result.put("competitorPrice", pricingInputsProvider.getCompetitorPrice(sku));

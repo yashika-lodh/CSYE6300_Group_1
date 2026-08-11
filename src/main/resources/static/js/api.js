@@ -21,10 +21,11 @@
  *                                           originalPrice=24.99 newPrice=21.38")
  *   GET  /api/audit/{sku}               -> string[]  (same format, filtered to one SKU)
  *
- *   PUT  /api/pricing-inputs/{sku}?cost=&currentPrice=&competitorPrice=&daysInInventory=&minPrice=&maxPrice=
- *                                        -> { sku, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice }
+ *   PUT  /api/pricing-inputs/{sku}?cost=&currentPrice=&competitorPrice=&daysInInventory=&minPrice=&maxPrice=&name=
+ *                                        -> { sku, name, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice }
  *                                           (all params optional; only supplied ones change; also seeds a
- *                                           flat baseline demand history so a brand-new SKU is immediately priceable)
+ *                                           flat baseline demand history so a brand-new SKU is immediately priceable.
+ *                                           name is purely cosmetic, never used in pricing math; null if never set.)
  *   GET  /api/pricing-inputs/{sku}      -> same shape, current effective values
  *
  *   POST /api/demand/{sku}?units=&date= -> { sku, trend, points: [{date, units}, ...] }  (date optional, defaults to today)

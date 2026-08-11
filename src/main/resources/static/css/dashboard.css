@@ -1,18 +1,24 @@
 :root {
-  --color-bg: #f5f6f8;
+  --color-bg: #f6f7fb;
   --color-panel: #ffffff;
-  --color-border: #e0e2e7;
-  --color-text: #1f2430;
-  --color-muted: #6b7280;
-  --color-primary: #2f5fd6;
-  --color-primary-hover: #24449e;
-  --color-rising: #1a8f4c;
-  --color-falling: #c23b3b;
-  --color-stable: #6b7280;
-  --color-danger-bg: #fdeaea;
-  --color-danger-text: #9b1c1c;
-  --color-ok-bg: #e8f5ee;
-  --color-ok-text: #1a6b3c;
+  --color-border: #e7e9f0;
+  --color-text: #14161f;
+  --color-muted: #676c7b;
+  --color-primary: #3452e1;
+  --color-primary-hover: #2740b8;
+  --color-primary-soft: #eef1fe;
+  --color-rising: #16874f;
+  --color-falling: #c0333a;
+  --color-stable: #676c7b;
+  --color-danger-bg: #fdecec;
+  --color-danger-text: #b3261e;
+  --color-ok-bg: #e9f7ef;
+  --color-ok-text: #146c3e;
+  --shadow-sm: 0 1px 2px rgba(16, 20, 40, 0.05);
+  --shadow-md: 0 2px 6px rgba(16, 20, 40, 0.05), 0 8px 24px rgba(16, 20, 40, 0.06);
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -22,33 +28,40 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
 }
 
 .top-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 32px;
+  padding: 16px 32px;
   background: var(--color-text);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .top-nav-brand {
   color: #fff;
   font-weight: 600;
   font-size: 14px;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
 }
 
 .top-nav-links {
   display: flex;
-  gap: 20px;
+  gap: 24px;
 }
 
 .top-nav-links a {
-  color: #c7cbd6;
+  color: rgba(255, 255, 255, 0.62);
   text-decoration: none;
   font-size: 13px;
   font-weight: 500;
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .top-nav-links a:hover,
@@ -56,22 +69,27 @@ body {
   color: #fff;
 }
 
+.top-nav-links a.active {
+  border-bottom-color: var(--color-primary);
+}
+
 .panel-subtitle {
-  margin: -4px 0 14px;
+  margin: -6px 0 16px;
   color: var(--color-muted);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 12.5px;
+  line-height: 1.6;
 }
 
 .panel-subtitle code {
   background: var(--color-bg);
   border-radius: 4px;
-  padding: 1px 5px;
+  padding: 1px 6px;
   font-size: 11px;
+  color: var(--color-text);
 }
 
 .app-header {
-  padding: 24px 32px 16px;
+  padding: 28px 32px 20px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-panel);
 }
@@ -85,20 +103,23 @@ body {
 
 .app-header h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
 }
 
 .subtitle {
-  margin: 4px 0 0;
+  margin: 5px 0 0;
   color: var(--color-muted);
   font-size: 14px;
 }
 
 .status-banner {
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  margin-top: 14px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
+  font-weight: 500;
 }
 
 .status-banner.status-ok {
@@ -115,14 +136,17 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  padding: 24px 32px;
+  padding: 28px 32px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .panel {
   background: var(--color-panel);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-sm);
 }
 
 .panel-wide {
@@ -131,7 +155,9 @@ body {
 
 .panel h2 {
   margin: 0 0 12px;
-  font-size: 16px;
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
 }
 
 .panel-header-row {
@@ -146,15 +172,11 @@ body {
 .panel-toolbar {
   display: flex;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .panel-toolbar input {
   flex: 1;
-  padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .audit-toolbar {
@@ -166,32 +188,68 @@ body {
 .audit-toolbar select {
   padding: 8px 10px;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   background: var(--color-panel);
   color: var(--color-text);
 }
 
+input, select {
+  font-family: inherit;
+}
+
+input[type="text"],
+input[type="number"],
+.audit-toolbar select,
+.guardrail-input {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-panel);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+.audit-toolbar select:focus,
+.guardrail-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
 button {
-  padding: 8px 14px;
+  padding: 8px 16px;
   background: var(--color-primary);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
 button:hover { background: var(--color-primary-hover); }
+button:active { transform: translateY(1px); }
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
 
 button.secondary {
   background: transparent;
   color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-border);
 }
 
 button.secondary:hover {
-  background: #eef2fc;
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
 }
 
 .data-table {
@@ -202,19 +260,36 @@ button.secondary:hover {
 
 .data-table th {
   text-align: left;
-  padding: 8px 6px;
+  padding: 10px 8px;
   color: var(--color-muted);
   border-bottom: 1px solid var(--color-border);
   font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .data-table td {
-  padding: 8px 6px;
+  padding: 11px 8px;
   border-bottom: 1px solid var(--color-border);
 }
 
+.data-table tbody tr {
+  transition: background 0.1s ease;
+}
+
 .data-table tbody tr:hover {
-  background: #fafbfd;
+  background: #fafbfe;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sku-code {
+  color: var(--color-muted);
+  font-size: 11.5px;
+  margin-left: 4px;
 }
 
 .qty-controls {
@@ -230,27 +305,25 @@ button.secondary:hover {
 
 .trend-badge {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
-.trend-badge.RISING { background: #e6f6ec; color: var(--color-rising); }
-.trend-badge.FALLING { background: #fbeaea; color: var(--color-falling); }
-.trend-badge.STABLE { background: #eef0f2; color: var(--color-stable); }
+.trend-badge.RISING { background: #e6f7ee; color: var(--color-rising); }
+.trend-badge.FALLING { background: #fceaea; color: var(--color-falling); }
+.trend-badge.STABLE { background: #eef0f4; color: var(--color-stable); }
 
 .guardrail-input {
   width: 90px;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .guardrail-status {
   font-size: 12px;
   color: var(--color-muted);
+  font-weight: 500;
 }
 
 .guardrail-status.guardrail-ok {
@@ -260,21 +333,17 @@ button.secondary:hover {
 .guardrail-status.guardrail-floor,
 .guardrail-status.guardrail-ceiling {
   color: var(--color-danger-text);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .onboarding-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .onboarding-form input {
-  padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 13px;
   width: 150px;
 }
 
@@ -283,9 +352,10 @@ button.secondary:hover {
 }
 
 .form-status {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-size: 13px;
   min-height: 18px;
+  font-weight: 500;
 }
 
 .form-status-ok {
@@ -299,11 +369,14 @@ button.secondary:hover {
 .empty-row td {
   color: var(--color-muted);
   text-align: center;
-  padding: 16px 6px;
+  padding: 20px 6px;
+  font-size: 13px;
 }
 
 .app-footer {
-  padding: 12px 32px 24px;
+  padding: 16px 32px 32px;
   color: var(--color-muted);
   font-size: 12px;
+  max-width: 1400px;
+  margin: 0 auto;
 }

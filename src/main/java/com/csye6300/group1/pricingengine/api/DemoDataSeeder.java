@@ -34,22 +34,22 @@ public class DemoDataSeeder {
         List<String> skus = new ArrayList<>();
 
         // STABLE -> CostPlusMarkupStrategy, no guardrail.
-        skus.add(seedOne("SKU-DEMO-1", 10.0, 20.0, 22.0, 5, 0.0, 0.0, null));
+        skus.add(seedOne("PCH-1042", "Fast-Charge USB-C Cable", 10.0, 20.0, 22.0, 5, 0.0, 0.0, null));
         // RISING (fed demand) -> CompetitorAwarePricingStrategy.
-        skus.add(seedOne("SKU-DEMO-2", 18.0, 35.0, 42.0, 5, 0.0, 0.0, new double[] {32, 34, 33, 36, 38}));
+        skus.add(seedOne("SNK-2210", "Trail Runner Sneakers", 18.0, 35.0, 42.0, 5, 0.0, 0.0, new double[] {32, 34, 33, 36, 38}));
         // FALLING (fed demand) -> InventoryAgingStrategy.
-        skus.add(seedOne("SKU-DEMO-3", 25.0, 45.0, 40.0, 45, 0.0, 0.0, new double[] {2, 3, 2, 1, 2}));
+        skus.add(seedOne("JKT-3305", "Packable Rain Jacket", 25.0, 45.0, 40.0, 45, 0.0, 0.0, new double[] {2, 3, 2, 1, 2}));
         // STABLE, but cost-plus would land above this max -> pinned at the ceiling.
-        skus.add(seedOne("SKU-DEMO-4", 30.0, 50.0, 60.0, 5, 0.0, 40.0, null));
+        skus.add(seedOne("WCH-4090", "Minimalist Analog Watch", 30.0, 50.0, 60.0, 5, 0.0, 40.0, null));
         // STABLE, but cost-plus would land below this min -> pinned at the floor.
-        skus.add(seedOne("SKU-DEMO-5", 6.0, 12.0, 14.0, 5, 10.0, 0.0, null));
+        skus.add(seedOne("SGL-5015", "Polarized Sunglasses", 6.0, 12.0, 14.0, 5, 10.0, 0.0, null));
 
         return skus;
     }
 
-    private String seedOne(String sku, double cost, double currentPrice, double competitorPrice,
+    private String seedOne(String sku, String name, double cost, double currentPrice, double competitorPrice,
                             int daysInInventory, double minPrice, double maxPrice, double[] demandUnits) {
-        pricingInputsProperties.upsertSkuOverride(sku, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice);
+        pricingInputsProperties.upsertSkuOverride(sku, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice, name);
         demandHistoryBySku.computeIfAbsent(sku, DemoDataSeeder::flatBaselineDemand);
         if (demandUnits != null) {
             appendDemand(sku, demandUnits);

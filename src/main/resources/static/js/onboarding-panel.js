@@ -24,6 +24,11 @@ const OnboardingPanel = (() => {
     return value === "" ? undefined : Number(value);
   }
 
+  function stringFieldValue(id) {
+    const value = document.getElementById(id).value.trim();
+    return value === "" ? undefined : value;
+  }
+
   function showStatus(message, isError = false) {
     const el = document.getElementById("onboarding-status");
     el.textContent = message;
@@ -38,6 +43,7 @@ const OnboardingPanel = (() => {
     }
 
     const fields = {
+      name: stringFieldValue("onboarding-name"),
       cost: fieldValue("onboarding-cost"),
       currentPrice: fieldValue("onboarding-current-price"),
       competitorPrice: fieldValue("onboarding-competitor-price"),
@@ -51,8 +57,9 @@ const OnboardingPanel = (() => {
     Dashboard.beginManualAction();
     try {
       const result = await Api.upsertPricingInputs(sku, fields);
+      const label = result.name ? `${result.name} (${sku})` : sku;
       showStatus(
-        `Saved ${sku}: cost=$${result.cost.toFixed(2)}, competitor=$${result.competitorPrice.toFixed(2)}, ` +
+        `Saved ${label}: cost=$${result.cost.toFixed(2)}, competitor=$${result.competitorPrice.toFixed(2)}, ` +
         `current=$${result.currentPrice.toFixed(2)}, daysInInventory=${result.daysInInventory}, ` +
         `minPrice=${result.minPrice > 0 ? "$" + result.minPrice.toFixed(2) : "unset"}, ` +
         `maxPrice=${result.maxPrice > 0 ? "$" + result.maxPrice.toFixed(2) : "unset"}`

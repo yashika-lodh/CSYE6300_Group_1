@@ -63,6 +63,13 @@ public class PricingInputsProperties {
     public synchronized SkuOverrides upsertSkuOverride(String sku, Double cost, Double currentPrice,
                                                         Double competitorPrice, Integer daysInInventory,
                                                         Double minPrice, Double maxPrice) {
+        return upsertSkuOverride(sku, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice, null);
+    }
+
+    /** Overload that also sets a display-only product name (e.g. "Wireless Earbuds") -- purely cosmetic, never read by any PricingStrategy. */
+    public synchronized SkuOverrides upsertSkuOverride(String sku, Double cost, Double currentPrice,
+                                                        Double competitorPrice, Integer daysInInventory,
+                                                        Double minPrice, Double maxPrice, String name) {
         SkuOverrides overrides = skus.computeIfAbsent(sku, k -> new SkuOverrides());
         if (cost != null) overrides.setCost(cost);
         if (currentPrice != null) overrides.setCurrentPrice(currentPrice);
@@ -70,7 +77,14 @@ public class PricingInputsProperties {
         if (daysInInventory != null) overrides.setDaysInInventory(daysInInventory);
         if (minPrice != null) overrides.setMinPrice(minPrice);
         if (maxPrice != null) overrides.setMaxPrice(maxPrice);
+        if (name != null) overrides.setName(name);
         return overrides;
+    }
+
+    /** Display-only product name for a SKU, or null if none was set. Never used for pricing math. */
+    public synchronized String getName(String sku) {
+        SkuOverrides overrides = skus.get(sku);
+        return overrides != null ? overrides.getName() : null;
     }
 
     /** Per-SKU overrides; any field left null falls back to the matching default* value above. */
@@ -81,6 +95,7 @@ public class PricingInputsProperties {
         private Integer daysInInventory;
         private Double minPrice;
         private Double maxPrice;
+        private String name;
 
         public Double getCost() { return cost; }
         public void setCost(Double cost) { this.cost = cost; }
@@ -99,5 +114,8 @@ public class PricingInputsProperties {
 
         public Double getMaxPrice() { return maxPrice; }
         public void setMaxPrice(Double maxPrice) { this.maxPrice = maxPrice; }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
     }
 }

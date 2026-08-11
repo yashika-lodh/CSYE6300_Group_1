@@ -189,9 +189,15 @@ const PriceHistoryPanel = (() => {
       </div>
     `;
 
-    wireHover(container, bySku, skus, { xScale, tMin, tMax, marginTop, plotHeight, marginLeft, plotWidth, width, height });
+    wireHover(container, bySku, skus, { xScale, yScale, tMin, tMax, marginTop, plotHeight, marginLeft, plotWidth, width, height });
   }
 
+  /**
+   * Nearest-line hover: highlights and shows the tooltip for only the one
+   * series whose line sits closest (vertically, in pixel space) to the
+   * pointer, instead of listing every series at the crosshair's X. The
+   * crosshair itself still tracks X (time) across the whole chart.
+   */
   function wireHover(container, bySku, skus, geometry) {
     const svg = container.querySelector("svg");
     const crosshair = container.querySelector(".crosshair-line");
@@ -203,10 +209,27 @@ const PriceHistoryPanel = (() => {
       container.querySelector(".viz-root").appendChild(tooltip);
     }
 
+    function highlightLine(sku) {
+      svg.querySelectorAll(".series-line").forEach((path) => {
+        const isHovered = path.dataset.sku === sku;
+        path.style.strokeWidth = isHovered ? "3" : "2";
+        path.style.opacity = isHovered ? "1" : "0.35";
+      });
+    }
+
+    function clearHighlight() {
+      svg.querySelectorAll(".series-line").forEach((path) => {
+        path.style.strokeWidth = "2";
+        path.style.opacity = "1";
+      });
+    }
+
     function onMove(event) {
       const rect = svg.getBoundingClientRect();
       const scaleX = geometry.width / rect.width;
+      const scaleY = geometry.height / rect.height;
       const svgX = (event.clientX - rect.left) * scaleX;
+      const svgY = (event.clientY - rect.top) * scaleY;
       const clampedX = Math.min(Math.max(svgX, geometry.marginLeft), geometry.marginLeft + geometry.plotWidth);
       const t = geometry.tMin + ((clampedX - geometry.marginLeft) / geometry.plotWidth) * (geometry.tMax - geometry.tMin);
 
@@ -214,11 +237,25 @@ const PriceHistoryPanel = (() => {
       crosshair.setAttribute("x2", clampedX);
       crosshair.style.display = "block";
 
-      const rows = skus.map((sku) => {
+      // Find the one series whose line sits closest to the pointer's Y position.
+      let closestSku = skus[0];
+      let closestValue = valueAt(bySku.get(closestSku), t);
+      let closestDistance = Infinity;
+      for (const sku of skus) {
         const v = valueAt(bySku.get(sku), t);
-        return `<div class="chart-tooltip-row"><span class="chart-tooltip-key" style="background: var(${colorVarFor(sku)})"></span><span class="chart-tooltip-sku">${escapeHtml(sku)}</span><span class="chart-tooltip-value">$${v.price.toFixed(2)}</span></div>`;
-      }).join("");
-      tooltip.innerHTML = `<div class="chart-tooltip-row" style="color:#d5d5d5; margin-bottom:4px;">${formatTime(t)}</div>${rows}`;
+        const distance = Math.abs(geometry.yScale(v.price) - svgY);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestSku = sku;
+          closestValue = v;
+        }
+      }
+
+      highlightLine(closestSku);
+
+      tooltip.innerHTML = `
+        <div class="chart-tooltip-row" style="color:#d5d5d5; margin-bottom:4px;">${formatTime(t)}</div>
+        <div class="chart-tooltip-row"><span class="chart-tooltip-key" style="background: var(${colorVarFor(closestSku)})"></span><span class="chart-tooltip-sku">${escapeHtml(closestSku)}</span><span class="chart-tooltip-value">$${closestValue.price.toFixed(2)}</span></div>`;
 
       const containerRect = container.getBoundingClientRect();
       tooltip.style.left = `${event.clientX - containerRect.left}px`;
@@ -227,6 +264,7 @@ const PriceHistoryPanel = (() => {
     }
 
     function onLeave() {
+      clearHighlight();
       crosshair.style.display = "none";
       tooltip.style.display = "none";
     }
