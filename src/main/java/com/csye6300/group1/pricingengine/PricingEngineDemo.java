@@ -31,9 +31,9 @@ import java.util.concurrent.TimeUnit;
  * DB-backed InventoryRepository (replacing the CSV) and a scheduled
  * repricing sweep on top of the same workflow hierarchy.
  */
-public class Main {
+public class PricingEngineDemo {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void demo() throws InterruptedException {
         // 1. Singleton inventory, seeded from + kept in sync with the DB
         // (Milestone 3: InventoryRepository replaces the inventory.csv load)
         InventoryRepository inventoryRepository = new InventoryRepository();
