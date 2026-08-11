@@ -1,4 +1,4 @@
-# CSYE 6300 - Final Project Milestone 3
+# CSYE 6300 - Final Project Submission
 
 ## 1. Project Group Number/Name
 Group 1
@@ -38,7 +38,7 @@ Direct-to-consumer (DTC) brands operating across multiple sales channels (Shopif
 - **Logging**: SLF4J + Logback
 - **External Integration**: Shopify Admin GraphQL API via `ShopifyApiClient`. Defaults to `MockGraphQLExecutor` for credential-free testing; automatically switches to the real `HttpGraphQLExecutor` transport when `SHOPIFY_SHOP_DOMAIN` and `SHOPIFY_ACCESS_TOKEN` environment variables are set
 
-## 7. Functionalities Implemented for Milestone 3
+## 7. Functionalities Implemented
 
 ### Persistent Storage (replaces CSV)
 - [x] `InventoryEntity` / `InventoryRepository` — JPA/Hibernate entities and DAO-style repository backed by a file-based H2 database (`data/pricingdb`), configured via `application.properties` + `META-INF/persistence.xml`
@@ -58,11 +58,20 @@ Direct-to-consumer (DTC) brands operating across multiple sales channels (Shopif
 - [x] `ShopifyApiClient` now picks `HttpGraphQLExecutor` or `MockGraphQLExecutor` automatically based on whether `SHOPIFY_SHOP_DOMAIN` / `SHOPIFY_ACCESS_TOKEN` are set (feature flag, zero changes needed at call sites)
 - [x] `ShopifyApiClientIntegrationTest` — real network test against a Shopify dev store, skipped by default so `mvn test` stays fast and credential-free for every teammate and for grading
 - [x] `DemandSignalRepository` — loads real demand history from `data/demand_signals.csv` (previously present but never read); `PricingEngineApplication` now uses it, falling back to Milestone 2 sample data only if the CSV is missing
-- [x] `dashboard.html` — lightweight static dashboard (served at `/dashboard.html`) showing live inventory, per-channel prices, and the audit trail via the existing REST endpoints
+- [x] `dashboard.html` — live operational dashboard (served at `/dashboard.html`) showing inventory, per-channel prices, demand forecast/strategy, and the audit trail via the existing REST endpoints
+- [x] `index.html` — landing/architecture page (served at `/`) with the problem statement, UML diagram, and a walkthrough of all 9 design patterns
 
-## 8. Functionalities Planned for Final Submission
-- [ ] Additional SalesChannel implementations — own website and social commerce — behind the existing Factory Method (in progress on branch `channels-integration`)
-- [ ] Brand-positioning guardrails — min/max price bounds enforced in every `PricingStrategy` (in progress on branch `channels-integration`)
+### Additional Channels & Guardrails (completed for Final Submission)
+- [x] `OwnWebsiteChannel` and `SocialCommerceChannel` — additional `SalesChannel` implementations, created via the existing `SalesChannelFactory` (`ChannelType.OWN_WEBSITE`, `ChannelType.SOCIAL_COMMERCE`)
+- [x] Brand-positioning guardrails — `PricingContext` now carries an optional `minPrice`/`maxPrice`, and `applyGuardrails()` clamps every strategy's candidate price into that range before it's finalized
+
+### Console Entry Point
+- [x] `Driver` — sole `main()` entry point for the console pattern demo, per course convention; delegates to `PricingEngineDemo` (renamed from `Main`), which builds and runs the full engine graph
+
+## 8. Final Submission Deliverables
+- [x] All project code (this repository)
+- [ ] PowerPoint presentation (UML, operating instructions, team contributions, design patterns, third-party libraries)
+- [ ] Recorded video demo (link to be added here before Canvas submission)
 
 ## 9. Build & Run
 
@@ -70,8 +79,10 @@ Direct-to-consumer (DTC) brands operating across multiple sales channels (Shopif
 mvn compile
 mvn test
 
-# Plain-Java console demo (Singleton/Observer/Command/etc., unchanged from Milestone 2)
-mvn compile exec:java -Dexec.mainClass="com.csye6300.group1.pricingengine.Main"
+# Plain-Java console demo (Singleton/Observer/Command/etc.)
+# Driver is the sole console entry point (course convention); it delegates
+# to PricingEngineDemo (renamed from Main), which builds and runs the engine graph.
+mvn compile exec:java -Dexec.mainClass="com.csye6300.group1.pricingengine.Driver"
 
 # Milestone 3: Spring Boot REST API (http://localhost:8080)
 mvn spring-boot:run
@@ -90,17 +101,18 @@ With both set, `ShopifyApiClient` automatically uses `HttpGraphQLExecutor`
 instead of the mock.
 
 With the Spring Boot app running (`mvn spring-boot:run`), open
-`http://localhost:8080/dashboard.html` in a browser to view live inventory,
-per-channel prices, and the audit trail.
+`http://localhost:8080/` for the landing/architecture page, or
+`http://localhost:8080/dashboard.html` directly to view live inventory,
+per-channel prices, demand forecast, and the audit trail.
 
 ## 10. Team Contributions
 
-| Person | Milestone 2 Ownership | Milestone 3 Contribution |
-|---|---|---|
-| Aditi Bailur | Inventory (Singleton), Observer wiring, `PricingCommand`/`UpdatePriceCommand` | JPA/H2-backed `InventoryRepository` + `InventoryEntity` (persistent storage, replacing CSV); `ScheduledRepricingWorkflow` (new Template Method subclass); DB config; `InventoryRepositoryTest` |
-| Yashika Lodh | `PricingStrategy` implementations, `SalesChannelFactory` | New channel implementations (own website, social commerce) via Factory Method; brand-positioning price guardrails (in progress) |
-| Pratham Rathod | `AuditLoggingCommandDecorator`, `PricingCommandInvoker`, `RepricingWorkflow` | Spring Boot REST API layer (`PricingEngineApplication`, `InventoryController`, `PricingController`, `AuditController`); Milestone 3 write-up + Design Document |
-| Sai Vinayaka Venkata Prateek Kacham | `DemandSignalAdapter`, Shopify integration layer | Real (non-mocked) Shopify GraphQL transport (`HttpGraphQLExecutor`); CSV-backed demand history (`DemandSignalRepository`); basic web dashboard (`dashboard.html`) |
+| Person | Milestone 2 Ownership | Milestone 3 Contribution | Final Submission Contribution |
+|---|---|---|---|
+| Aditi Bailur | Inventory (Singleton), Observer wiring, `PricingCommand`/`UpdatePriceCommand` | JPA/H2-backed `InventoryRepository` + `InventoryEntity` (persistent storage, replacing CSV); `ScheduledRepricingWorkflow` (new Template Method subclass); DB config; `InventoryRepositoryTest` | — |
+| Yashika Lodh | `PricingStrategy` implementations, `SalesChannelFactory` | — | `OwnWebsiteChannel` and `SocialCommerceChannel` via `SalesChannelFactory`; brand-positioning price guardrails (`PricingContext.applyGuardrails()`) |
+| Pratham Rathod | `AuditLoggingCommandDecorator`, `PricingCommandInvoker`, `RepricingWorkflow` | Spring Boot REST API layer (`PricingEngineApplication`, `InventoryController`, `PricingController`, `AuditController`); Milestone 3 write-up + Design Document | REST API layer documentation |
+| Sai Vinayaka Venkata Prateek Kacham (Prateek) | `DemandSignalAdapter`, Shopify integration layer | Real (non-mocked) Shopify GraphQL transport (`HttpGraphQLExecutor`); CSV-backed demand history (`DemandSignalRepository`); basic web dashboard (`dashboard.html`) | Channels & Integration: Shopify HTTP transport, dashboard, integration testing; `Driver`/`PricingEngineDemo` console entry-point refactor; README updates |
 
 ## 11. GitHub Repository
 https://github.com/yashika-lodh/CSYE6300_Group_1.git
@@ -108,4 +120,6 @@ https://github.com/yashika-lodh/CSYE6300_Group_1.git
 ## 12. Additional Documentation
 - Design Document: `docs/DesignDocument_Milestone3.md`
 - Milestone 2 Design Document: `docs/DesignDocument_Milestone2.md`
-- Updated Milestone 3 write-up: `Milestone3_Document.pdf`
+- Milestone 3 write-up: `Milestone3_Document.pdf`
+- Final Submission slide deck: (to be added)
+- Final Submission video demo link: (to be added)

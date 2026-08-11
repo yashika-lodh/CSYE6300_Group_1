@@ -3,95 +3,128 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dynamic Pricing Engine — Dashboard</title>
+  <title>Dynamic Pricing Engine — Multi-Channel DTC Retail</title>
   <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/landing.css" />
 </head>
 <body>
 
-  <header class="app-header">
+  <nav class="top-nav">
+    <span class="top-nav-brand">Dynamic Pricing Engine</span>
+    <div class="top-nav-links">
+      <a href="index.html" class="active">Overview</a>
+      <a href="dashboard.html">Live Dashboard</a>
+    </div>
+  </nav>
+
+  <header class="hero">
     <h1>Dynamic Pricing Engine</h1>
-    <p class="subtitle">Multi-Channel DTC Retail — Live Dashboard</p>
-    <div id="status-banner" class="status-banner status-ok" hidden></div>
+    <p class="hero-subtitle">Multi-Channel DTC Retail — CSYE 6300, Group 1</p>
+    <p class="hero-blurb">
+      DTC brands selling across Shopify, their own website, and social commerce
+      price manually and inconsistently, with no feedback loop back to demand.
+      This engine forecasts demand in real time, auto-selects a pricing
+      strategy per market conditions, syncs prices across every channel, and
+      keeps a full audit trail of every price change — built as a live
+      demonstration of nine classic software design patterns working together.
+    </p>
+    <a class="hero-cta" href="dashboard.html">Open the Live Dashboard →</a>
   </header>
 
-  <main class="dashboard-grid">
+  <section class="section">
+    <h2>Architecture</h2>
+    <p class="section-lede">
+      One pipeline, one feedback loop: demand history feeds a forecaster,
+      the forecaster's trend picks a pricing strategy, the resulting price
+      change is executed and logged, and every stock change loops back in
+      automatically through an Observer.
+    </p>
+    <div class="diagram-frame">
+      <img src="media/uml_diagram.png" alt="UML diagram of the pricing engine architecture" />
+    </div>
+  </section>
 
-    <!-- Inventory Panel -->
-    <section class="panel" id="inventory-panel">
-      <h2>Inventory</h2>
-      <div class="panel-toolbar">
-        <input id="inventory-sku-input" type="text" placeholder="SKU (e.g. SKU-1001)" />
-        <button id="inventory-lookup-btn">Add / Track</button>
-      </div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Stock</th>
-            <th>Adjust</th>
-          </tr>
-        </thead>
-        <tbody id="inventory-rows">
-          <!-- rows injected by inventory-panel.js -->
-        </tbody>
-      </table>
-    </section>
+  <section class="section">
+    <h2>Nine Design Patterns</h2>
+    <p class="section-lede">
+      Every core class names the pattern it implements directly in its
+      Javadoc — this system is a working example of each, not just a
+      textbook description.
+    </p>
+    <div class="pattern-grid">
 
-    <!-- Pricing Panel -->
-    <section class="panel" id="pricing-panel">
-      <h2>Pricing</h2>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Channel</th>
-            <th>Price</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="pricing-rows">
-          <!-- rows injected by pricing-panel.js -->
-        </tbody>
-      </table>
-    </section>
+      <article class="pattern-card">
+        <h3>Singleton</h3>
+        <p class="pattern-class"><code>Inventory</code></p>
+        <p>Exactly one thread-safe stock ledger shared by every sales channel.</p>
+      </article>
 
-    <!-- Audit Panel -->
-    <section class="panel panel-wide" id="audit-panel">
-      <div class="panel-header-row">
-        <h2>Audit Log</h2>
-        <div class="audit-toolbar">
-          <select id="audit-sku-filter" aria-label="Filter audit log by SKU">
-            <option value="">All SKUs</option>
-          </select>
-          <button id="audit-refresh-btn">Refresh</button>
-        </div>
-      </div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>Action</th>
-            <th>SKU</th>
-            <th>Original Price</th>
-            <th>New Price</th>
-          </tr>
-        </thead>
-        <tbody id="audit-rows">
-          <!-- rows injected by audit-panel.js -->
-        </tbody>
-      </table>
-    </section>
+      <article class="pattern-card">
+        <h3>Observer</h3>
+        <p class="pattern-class"><code>InventoryObserver</code>, <code>RepricingTriggerObserver</code>, <code>InventoryPersistenceObserver</code></p>
+        <p>Two independent subscribers react to a stock change — one triggers a reprice, one writes through to the DB.</p>
+      </article>
 
-  </main>
+      <article class="pattern-card">
+        <h3>Strategy</h3>
+        <p class="pattern-class"><code>PricingStrategy</code>, <code>PricingStrategySelector</code></p>
+        <p>Interchangeable pricing algorithms chosen at runtime by demand trend: cost-plus, competitor-aware, or inventory-aging.</p>
+      </article>
+
+      <article class="pattern-card">
+        <h3>Factory Method</h3>
+        <p class="pattern-class"><code>SalesChannelFactory</code></p>
+        <p>Centralizes creation of every channel type (Shopify, own website, social commerce) behind one call.</p>
+      </article>
+
+      <article class="pattern-card">
+        <h3>Command</h3>
+        <p class="pattern-class"><code>PricingCommand</code>, <code>UpdatePriceCommand</code>, <code>PricingCommandInvoker</code></p>
+        <p>Encapsulates a price change so it can be queued, executed, and undone uniformly across channels.</p>
+      </article>
+
+      <article class="pattern-card">
+        <h3>Decorator</h3>
+        <p class="pattern-class"><code>AuditLoggingCommandDecorator</code></p>
+        <p>Wraps any command with compliance logging without touching the command's own execute/undo logic.</p>
+      </article>
+
+      <article class="pattern-card">
+        <h3>Adapter</h3>
+        <p class="pattern-class"><code>DemandSignalAdapter</code></p>
+        <p>Translates the external raw demand feed shape into the engine's own domain model.</p>
+      </article>
+
+      <article class="pattern-card">
+        <h3>Template Method</h3>
+        <p class="pattern-class"><code>RepricingWorkflow</code>, <code>StandardRepricingWorkflow</code>, <code>ScheduledRepricingWorkflow</code></p>
+        <p>One fixed fetch → validate → execute → log skeleton, run either on-demand or on a timer.</p>
+      </article>
+
+      <article class="pattern-card">
+        <h3>Repository</h3>
+        <p class="pattern-class"><code>InventoryRepository</code>, <code>DemandSignalRepository</code></p>
+        <p>Decouples domain logic from storage — JPA/H2 for stock, CSV for demand history.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Tech Stack</h2>
+    <ul class="tech-list">
+      <li>Java 21</li>
+      <li>Spring Boot 3.3 (REST API)</li>
+      <li>Hibernate/JPA + H2 (persistence)</li>
+      <li>JUnit 5 + Spring Boot Test</li>
+      <li>SLF4J / Logback</li>
+      <li>Shopify Admin GraphQL API</li>
+    </ul>
+  </section>
 
   <footer class="app-footer">
-    <span id="last-updated">Not yet loaded</span>
+    <span>Dynamic Pricing Engine — CSYE 6300, Group 1</span>
   </footer>
 
-  <script src="js/api.js"></script>
-  <script src="js/inventory-panel.js"></script>
-  <script src="js/pricing-panel.js"></script>
-  <script src="js/audit-panel.js"></script>
-  <script src="js/dashboard.js"></script>
 </body>
 </html>

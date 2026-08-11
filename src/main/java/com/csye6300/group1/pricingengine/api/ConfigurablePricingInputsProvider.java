@@ -49,7 +49,7 @@ public class ConfigurablePricingInputsProvider implements PricingInputsProvider 
     }
 
     private <T> T resolve(String sku, Function<PricingInputsProperties.SkuOverrides, T> field, T defaultValue) {
-        PricingInputsProperties.SkuOverrides overrides = properties.getSkus().get(sku);
+        PricingInputsProperties.SkuOverrides overrides = properties.getOverridesFor(sku);
         if (overrides == null) {
             return defaultValue;
         }

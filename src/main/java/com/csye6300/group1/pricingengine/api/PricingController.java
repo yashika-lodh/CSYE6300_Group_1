@@ -2,6 +2,7 @@ package com.csye6300.group1.pricingengine.api;
 
 import com.csye6300.group1.pricingengine.channel.ChannelManager;
 import com.csye6300.group1.pricingengine.channel.SalesChannel;
+import com.csye6300.group1.pricingengine.workflow.ForecastInsight;
 import com.csye6300.group1.pricingengine.workflow.RepricingWorkflow;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,6 +38,17 @@ public class PricingController {
     @GetMapping("/{sku}")
     public Map<String, Object> currentPrices(@PathVariable String sku) {
         return Map.of("sku", sku, "prices", pricesByChannel(sku));
+    }
+
+    /**
+     * Read-only preview of the detected demand Trend and the PricingStrategy
+     * it maps to, without triggering an actual reprice. Surfaces the
+     * Strategy pattern's decision for the dashboard's Demand Forecast panel.
+     */
+    @GetMapping("/{sku}/forecast")
+    public Map<String, Object> forecast(@PathVariable String sku) {
+        ForecastInsight insight = repricingWorkflow.previewForecast(sku);
+        return Map.of("sku", sku, "trend", insight.trend(), "strategy", insight.strategyName());
     }
 
     private Map<String, Double> pricesByChannel(String sku) {

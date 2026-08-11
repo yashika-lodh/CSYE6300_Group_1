@@ -1,188 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Dynamic Pricing Engine — Dashboard</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 2rem; background: #f7f7f9; color: #222; }
-  h1 { margin-bottom: 0.25rem; }
-  .subtitle { color: #666; margin-top: 0; }
-  .panel { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #eee; }
-  input, button { padding: 0.4rem 0.6rem; font-size: 1rem; }
-  button { cursor: pointer; }
-  .row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
-  .status { font-size: 0.9rem; color: #666; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dynamic Pricing Engine — Dashboard</title>
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/chart.css" />
 </head>
 <body>
 
-<h1>Dynamic Pricing Engine</h1>
-<p class="subtitle">Multi-Channel DTC Retail — live view over the REST API</p>
+  <nav class="top-nav">
+    <span class="top-nav-brand">Dynamic Pricing Engine</span>
+    <div class="top-nav-links">
+      <a href="index.html">Overview</a>
+      <a href="dashboard.html" class="active">Live Dashboard</a>
+    </div>
+  </nav>
 
-<div class="panel">
-  <h2>Inventory</h2>
-  <div class="row">
-    <button onclick="loadInventory()">Refresh</button>
-    <span id="inventoryStatus" class="status"></span>
-  </div>
-  <div class="row">
-    <input id="stockSku" placeholder="SKU (e.g. SKU-1001)" value="SKU-1001">
-    <input id="stockQuantity" type="number" placeholder="Set quantity to...">
-    <button onclick="setStock()">Set Stock</button>
-    <input id="stockDelta" type="number" placeholder="Adjust by... (e.g. -5)">
-    <button onclick="adjustStock()">Adjust Stock</button>
-  </div>
-  <table id="inventoryTable">
-    <thead><tr><th>SKU</th><th>Quantity</th></tr></thead>
-    <tbody></tbody>
-  </table>
-</div>
+  <header class="app-header">
+    <div class="app-header-row">
+      <div>
+        <h1>Dynamic Pricing Engine</h1>
+        <p class="subtitle">Multi-Channel DTC Retail — Live Dashboard</p>
+      </div>
+      <button id="seed-demo-data-btn" class="secondary">Load Demo Data</button>
+    </div>
+    <div id="status-banner" class="status-banner status-ok" hidden></div>
+  </header>
 
-<div class="panel">
-  <h2>Prices by Channel</h2>
-  <div class="row">
-    <input id="priceSku" placeholder="SKU (e.g. SKU-1001)" value="SKU-1001">
-    <button onclick="loadPrices()">Get Prices</button>
-    <button onclick="reprice()">Trigger Reprice</button>
-    <span id="priceStatus" class="status"></span>
-  </div>
-  <table id="priceTable">
-    <thead><tr><th>Channel</th><th>Price</th></tr></thead>
-    <tbody></tbody>
-  </table>
-</div>
+  <main class="dashboard-grid">
 
-<div class="panel">
-  <h2>Audit Trail</h2>
-  <div class="row">
-    <input id="auditSku" placeholder="Filter by SKU (optional)">
-    <button onclick="loadAudit()">Refresh</button>
-    <span id="auditStatus" class="status"></span>
-  </div>
-  <ul id="auditList"></ul>
-</div>
+    <!-- Onboarding Panel -->
+    <section class="panel panel-wide" id="onboarding-panel">
+      <h2>Onboard / Configure SKU</h2>
+      <p class="panel-subtitle">
+        Set the pricing inputs <code>PricingStrategy</code> reads for a SKU —
+        cost, competitor price, current price, days in inventory, and
+        brand-positioning min/max guardrails — at runtime, no restart needed.
+        A brand-new SKU is seeded with a flat baseline demand history so it's
+        immediately priceable.
+      </p>
+      <div class="onboarding-form">
+        <input id="onboarding-sku-input" type="text" placeholder="SKU (e.g. WCH-4090)" />
+        <input id="onboarding-name" type="text" placeholder="Product name (optional)" />
+        <input id="onboarding-cost" type="number" step="0.01" placeholder="Cost" />
+        <input id="onboarding-current-price" type="number" step="0.01" placeholder="Current price" />
+        <input id="onboarding-competitor-price" type="number" step="0.01" placeholder="Competitor price" />
+        <input id="onboarding-days-in-inventory" type="number" placeholder="Days in inventory" />
+        <input id="onboarding-min-price" type="number" step="0.01" placeholder="Min price (guardrail)" />
+        <input id="onboarding-max-price" type="number" step="0.01" placeholder="Max price (guardrail)" />
+        <button id="onboarding-save-btn">Save Pricing Inputs</button>
+      </div>
+      <div class="onboarding-form onboarding-form-secondary">
+        <input id="onboarding-demand-units" type="number" placeholder="Units sold today" />
+        <button id="onboarding-record-demand-btn" class="secondary">Record Demand</button>
+      </div>
+      <p id="onboarding-status" class="form-status"></p>
+    </section>
 
-<script>
-  const API_BASE = ""; // same origin as the Spring Boot app
+    <!-- Inventory Panel -->
+    <section class="panel" id="inventory-panel">
+      <h2>Inventory</h2>
+      <div class="panel-toolbar">
+        <input id="inventory-sku-input" type="text" placeholder="SKU (e.g. SKU-1001)" />
+        <button id="inventory-lookup-btn">Add / Track</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Stock</th>
+            <th>Adjust</th>
+          </tr>
+        </thead>
+        <tbody id="inventory-rows">
+          <!-- rows injected by inventory-panel.js -->
+        </tbody>
+      </table>
+    </section>
 
-  async function loadInventory() {
-    const status = document.getElementById('inventoryStatus');
-    status.textContent = "Loading...";
-    try {
-      const res = await fetch(`${API_BASE}/api/inventory`);
-      const data = await res.json();
-      const tbody = document.querySelector('#inventoryTable tbody');
-      tbody.innerHTML = '';
-      Object.entries(data).forEach(([sku, qty]) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${sku}</td><td>${qty}</td>`;
-        tbody.appendChild(tr);
-      });
-      status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
-    } catch (e) {
-      status.textContent = "Failed to load inventory: " + e.message;
-    }
-  }
+    <!-- Pricing Panel -->
+    <section class="panel" id="pricing-panel">
+      <h2>Pricing</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Channel</th>
+            <th>Price</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="pricing-rows">
+          <!-- rows injected by pricing-panel.js -->
+        </tbody>
+      </table>
+    </section>
 
-  async function setStock() {
-    const sku = document.getElementById('stockSku').value.trim();
-    const quantity = document.getElementById('stockQuantity').value;
-    const status = document.getElementById('inventoryStatus');
-    if (!sku || quantity === '') { status.textContent = "Enter a SKU and a quantity."; return; }
-    status.textContent = "Setting stock...";
-    try {
-      await fetch(`${API_BASE}/api/inventory/${encodeURIComponent(sku)}?quantity=${encodeURIComponent(quantity)}`,
-          { method: 'PUT' });
-      // Setting stock fires the same Observer as an adjustment, so this can
-      // trigger an automatic reprice too -- refresh prices (for this SKU) and audit as well.
-      document.getElementById('priceSku').value = sku;
-      await loadInventory();
-      await loadPrices();
-      await loadAudit();
-    } catch (e) {
-      status.textContent = "Failed to set stock: " + e.message;
-    }
-  }
+    <!-- Guardrails Panel -->
+    <section class="panel panel-wide" id="guardrails-panel">
+      <h2>Brand-Positioning Guardrails</h2>
+      <p class="panel-subtitle">
+        The min/max price bounds <code>PricingContext.applyGuardrails()</code>
+        clamps every <code>PricingStrategy</code>'s output to, per SKU. Edit
+        and save to change them at runtime — leave a field blank to leave it
+        unchanged.
+      </p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Current Price</th>
+            <th>Min Price</th>
+            <th>Max Price</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="guardrails-rows">
+          <!-- rows injected by guardrails-panel.js -->
+        </tbody>
+      </table>
+    </section>
 
-  async function adjustStock() {
-    const sku = document.getElementById('stockSku').value.trim();
-    const delta = document.getElementById('stockDelta').value;
-    const status = document.getElementById('inventoryStatus');
-    if (!sku || delta === '') { status.textContent = "Enter a SKU and a delta."; return; }
-    status.textContent = "Adjusting stock...";
-    try {
-      await fetch(`${API_BASE}/api/inventory/${encodeURIComponent(sku)}/adjust?delta=${encodeURIComponent(delta)}`,
-          { method: 'POST' });
-      document.getElementById('priceSku').value = sku;
-      await loadInventory();
-      await loadPrices();
-      await loadAudit();
-    } catch (e) {
-      status.textContent = "Failed to adjust stock: " + e.message;
-    }
-  }
+    <!-- Price History Panel -->
+    <section class="panel panel-wide" id="price-history-panel">
+      <div class="panel-header-row">
+        <h2>Price History</h2>
+        <div class="audit-toolbar">
+          <button id="price-history-toggle-btn" class="secondary">View as table</button>
+        </div>
+      </div>
+      <p class="panel-subtitle">
+        Every price change logged by <code>AuditLoggingCommandDecorator</code>,
+        plotted per SKU over time. A price only changes when a reprice is
+        logged, so each line is a step, not a trend line.
+      </p>
+      <div id="price-history-body"></div>
+    </section>
 
-  async function loadPrices() {
-    const sku = document.getElementById('priceSku').value.trim();
-    const status = document.getElementById('priceStatus');
-    if (!sku) { status.textContent = "Enter a SKU first."; return; }
-    status.textContent = "Loading...";
-    try {
-      const res = await fetch(`${API_BASE}/api/pricing/${encodeURIComponent(sku)}`);
-      const data = await res.json();
-      const tbody = document.querySelector('#priceTable tbody');
-      tbody.innerHTML = '';
-      Object.entries(data.prices || {}).forEach(([channel, price]) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${channel}</td><td>$${Number(price).toFixed(2)}</td>`;
-        tbody.appendChild(tr);
-      });
-      status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
-    } catch (e) {
-      status.textContent = "Failed to load prices: " + e.message;
-    }
-  }
+    <!-- Demand Forecast Panel -->
+    <section class="panel panel-wide" id="forecast-panel">
+      <h2>Demand Forecast</h2>
+      <p class="panel-subtitle">
+        What the Strategy pattern is deciding right now — the Trend
+        <code>DemandForecaster</code> detected for each SKU, and which
+        concrete <code>PricingStrategy</code> <code>PricingStrategySelector</code>
+        mapped it to. Read-only — nothing here triggers a reprice.
+      </p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Trend</th>
+            <th>Selected Strategy</th>
+          </tr>
+        </thead>
+        <tbody id="forecast-rows">
+          <!-- rows injected by forecast-panel.js -->
+        </tbody>
+      </table>
+    </section>
 
-  async function reprice() {
-    const sku = document.getElementById('priceSku').value.trim();
-    const status = document.getElementById('priceStatus');
-    if (!sku) { status.textContent = "Enter a SKU first."; return; }
-    status.textContent = "Repricing...";
-    try {
-      await fetch(`${API_BASE}/api/pricing/${encodeURIComponent(sku)}/reprice`, { method: 'POST' });
-      await loadPrices();
-      await loadAudit();
-    } catch (e) {
-      status.textContent = "Reprice failed: " + e.message;
-    }
-  }
+    <!-- Audit Panel -->
+    <section class="panel panel-wide" id="audit-panel">
+      <div class="panel-header-row">
+        <h2>Audit Log</h2>
+        <div class="audit-toolbar">
+          <select id="audit-sku-filter" aria-label="Filter audit log by SKU">
+            <option value="">All SKUs</option>
+          </select>
+          <button id="audit-refresh-btn">Refresh</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>SKU</th>
+            <th>Original Price</th>
+            <th>New Price</th>
+          </tr>
+        </thead>
+        <tbody id="audit-rows">
+          <!-- rows injected by audit-panel.js -->
+        </tbody>
+      </table>
+    </section>
 
-  async function loadAudit() {
-    const sku = document.getElementById('auditSku').value.trim();
-    const status = document.getElementById('auditStatus');
-    status.textContent = "Loading...";
-    try {
-      const url = sku ? `${API_BASE}/api/audit/${encodeURIComponent(sku)}` : `${API_BASE}/api/audit`;
-      const res = await fetch(url);
-      const entries = await res.json();
-      const list = document.getElementById('auditList');
-      list.innerHTML = '';
-      entries.forEach(entry => {
-        const li = document.createElement('li');
-        li.textContent = entry;
-        list.appendChild(li);
-      });
-      status.textContent = `${entries.length} entries`;
-    } catch (e) {
-      status.textContent = "Failed to load audit trail: " + e.message;
-    }
-  }
+  </main>
 
-  loadInventory();
-  loadAudit();
-</script>
+  <footer class="app-footer">
+    <span id="last-updated">Not yet loaded</span>
+  </footer>
 
+  <script src="js/api.js"></script>
+  <script src="js/inventory-panel.js"></script>
+  <script src="js/onboarding-panel.js"></script>
+  <script src="js/pricing-panel.js"></script>
+  <script src="js/guardrails-panel.js"></script>
+  <script src="js/forecast-panel.js"></script>
+  <script src="js/audit-panel.js"></script>
+  <script src="js/price-history-panel.js"></script>
+  <script src="js/dashboard.js"></script>
 </body>
 </html>

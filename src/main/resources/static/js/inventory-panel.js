@@ -4,6 +4,11 @@
  * returns the full Inventory singleton snapshot), plus +/- controls to
  * adjust stock. After any adjustment, re-fetches so the panel reflects
  * whatever the backend's Observer-triggered reprice just did.
+ *
+ * Also looks up each SKU's optional display name (GET /api/pricing-inputs/{sku}
+ * -- cosmetic only, never used in pricing math) so the table reads like a
+ * product catalog ("Trail Runner Sneakers SNK-2210") instead of bare codes.
+ * Names are cached per SKU for the page's lifetime since they rarely change.
  */
 
 const InventoryPanel = (() => {
@@ -11,6 +16,7 @@ const InventoryPanel = (() => {
   // new SKU with no stock recorded yet). Merged with the live snapshot on render.
   let manuallyTrackedSkus = [];
   let lastKnownSkus = [];
+  const nameBySku = new Map();
 
   function getTrackedSkus() {
     return [...lastKnownSkus];
@@ -22,11 +28,34 @@ const InventoryPanel = (() => {
     }
   }
 
+  /** Cached display name for a SKU, or null if none was ever set. */
+  function getDisplayName(sku) {
+    return nameBySku.get(sku) || null;
+  }
+
+  async function loadNames(skus) {
+    const unknown = skus.filter((sku) => !nameBySku.has(sku));
+    if (unknown.length === 0) return;
+
+    await Promise.all(unknown.map(async (sku) => {
+      try {
+        const inputs = await Api.getPricingInputs(sku);
+        nameBySku.set(sku, inputs.name || null);
+      } catch (err) {
+        nameBySku.set(sku, null);
+      }
+    }));
+  }
+
   function rowHtml(sku, quantity, failed = false) {
     const qtyDisplay = failed ? "—" : quantity;
+    const name = getDisplayName(sku);
+    const skuLabel = name
+      ? `${name} <span class="sku-code">${sku}</span>`
+      : sku;
     return `
       <tr data-sku="${sku}">
-        <td>${sku}</td>
+        <td>${skuLabel}</td>
         <td class="qty-cell">${qtyDisplay}</td>
         <td>
           <div class="qty-controls">
@@ -56,6 +85,8 @@ const InventoryPanel = (() => {
       return;
     }
 
+    await loadNames(lastKnownSkus);
+
     const rows = lastKnownSkus.map((sku) => rowHtml(sku, snapshot[sku] ?? 0, !(sku in snapshot) && !manuallyTrackedSkus.includes(sku)));
     tbody.innerHTML = rows.join("");
 
@@ -74,10 +105,13 @@ const InventoryPanel = (() => {
     try {
       await Api.adjustStock(sku, delta);
       // Stock change may have triggered a reprice on the backend (Observer
-      // pattern) — refresh both panels so the dashboard reflects it.
+      // pattern) — refresh every panel so the dashboard reflects it.
       await render();
       if (window.PricingPanel) {
         await window.PricingPanel.render();
+      }
+      if (window.ForecastPanel) {
+        await window.ForecastPanel.render();
       }
     } catch (err) {
       console.error("Failed to adjust stock for", sku, err);
@@ -103,6 +137,9 @@ const InventoryPanel = (() => {
         if (window.PricingPanel) {
           await window.PricingPanel.render();
         }
+        if (window.ForecastPanel) {
+          await window.ForecastPanel.render();
+        }
       } finally {
         Dashboard.endManualAction();
       }
@@ -113,7 +150,7 @@ const InventoryPanel = (() => {
     });
   }
 
-  return { render, wireToolbar, getTrackedSkus, trackSku };
+  return { render, wireToolbar, getTrackedSkus, trackSku, getDisplayName };
 })();
 
 window.InventoryPanel = InventoryPanel;

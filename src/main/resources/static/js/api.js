@@ -14,14 +14,24 @@
  *
  *   GET  /api/pricing/{sku}             -> { sku, prices: { [channel]: price } }
  *   POST /api/pricing/{sku}/reprice     -> { sku, prices: { [channel]: price } }
+ *   GET  /api/pricing/{sku}/forecast    -> { sku, trend, strategy }  (read-only, no reprice triggered)
  *
  *   GET  /api/audit                     -> string[]  (raw AuditLoggingCommandDecorator lines,
  *                                           e.g. "[2026-08-09T22:10:21.588Z] EXECUTE sku=SKU-1001
  *                                           originalPrice=24.99 newPrice=21.38")
  *   GET  /api/audit/{sku}               -> string[]  (same format, filtered to one SKU)
  *
- * Note: neither PricingController nor AuditController expose a demand trend
- * (RISING/FALLING/STABLE) over HTTP, so the dashboard does not display one.
+ *   PUT  /api/pricing-inputs/{sku}?cost=&currentPrice=&competitorPrice=&daysInInventory=&minPrice=&maxPrice=&name=
+ *                                        -> { sku, name, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice }
+ *                                           (all params optional; only supplied ones change; also seeds a
+ *                                           flat baseline demand history so a brand-new SKU is immediately priceable.
+ *                                           name is purely cosmetic, never used in pricing math; null if never set.)
+ *   GET  /api/pricing-inputs/{sku}      -> same shape, current effective values
+ *
+ *   POST /api/demand/{sku}?units=&date= -> { sku, trend, points: [{date, units}, ...] }  (date optional, defaults to today)
+ *   GET  /api/demand/{sku}              -> same shape, full recorded history
+ *
+ *   POST /api/demo/seed                 -> { seeded: [sku, ...] }  (re-seeds the mock SKU-DEMO-1..5 dataset)
  */
 
 const Api = (() => {
@@ -71,6 +81,11 @@ const Api = (() => {
     return request(`/api/pricing/${encodeURIComponent(sku)}/reprice`, { method: "POST" });
   }
 
+  /** Read-only trend + selected-strategy preview: { sku, trend, strategy }. */
+  function getForecast(sku) {
+    return request(`/api/pricing/${encodeURIComponent(sku)}/forecast`);
+  }
+
   /** Full audit trail as raw log-line strings. */
   function getAuditReport() {
     return request(`/api/audit`);
@@ -81,9 +96,45 @@ const Api = (() => {
     return request(`/api/audit/${encodeURIComponent(sku)}`);
   }
 
+  /**
+   * Creates or updates a SKU's pricing inputs. `fields` may include any of
+   * cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice
+   * -- omitted/undefined ones are left unchanged on the backend.
+   */
+  function upsertPricingInputs(sku, fields) {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined && v !== null && v !== ""))
+    ).toString();
+    return request(`/api/pricing-inputs/${encodeURIComponent(sku)}?${qs}`, { method: "PUT" });
+  }
+
+  function getPricingInputs(sku) {
+    return request(`/api/pricing-inputs/${encodeURIComponent(sku)}`);
+  }
+
+  /** Records one day of demand for a SKU. `date` is optional (YYYY-MM-DD); defaults to today. */
+  function recordDemand(sku, units, date) {
+    const params = { units };
+    if (date) params.date = date;
+    const qs = new URLSearchParams(params).toString();
+    return request(`/api/demand/${encodeURIComponent(sku)}?${qs}`, { method: "POST" });
+  }
+
+  function getDemandHistory(sku) {
+    return request(`/api/demand/${encodeURIComponent(sku)}`);
+  }
+
+  /** Re-seeds the mock SKU-DEMO-1..5 dataset. Returns { seeded: [sku, ...] }. Blocks a few seconds server-side (real staggered reprices), not a bug. */
+  function seedDemoData() {
+    return request(`/api/demo/seed`, { method: "POST" });
+  }
+
   return {
     getAllInventory, getInventory, adjustStock, setStock,
-    getPrices, reprice,
+    getPrices, reprice, getForecast,
     getAuditReport, getAuditReportForSku,
+    upsertPricingInputs, getPricingInputs,
+    recordDemand, getDemandHistory,
+    seedDemoData,
   };
 })();
