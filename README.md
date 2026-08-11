@@ -390,7 +390,6 @@ classDiagram
 ## 8. Final Submission Deliverables
 - [x] All project code (this repository)
 - [ ] PowerPoint presentation (UML, operating instructions, team contributions, design patterns, third-party libraries)
-- [ ] Recorded video demo (link to be added here before Canvas submission)
 
 ## 9. Build & Run
 
