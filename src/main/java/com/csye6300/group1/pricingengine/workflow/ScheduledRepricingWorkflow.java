@@ -6,9 +6,11 @@ import com.csye6300.group1.pricingengine.forecast.DemandDataPoint;
 import com.csye6300.group1.pricingengine.forecast.DemandForecaster;
 import com.csye6300.group1.pricingengine.selector.PricingStrategySelector;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -31,6 +33,8 @@ public class ScheduledRepricingWorkflow extends StandardRepricingWorkflow {
     });
 
     private ScheduledFuture<?> scheduledTask;
+    private volatile Collection<String> scheduledSkus = Set.of();
+    private volatile Instant lastRunAt;
 
     public ScheduledRepricingWorkflow(Map<String, List<DemandDataPoint>> demandHistoryBySku,
                                        PricingInputsProvider inputsProvider,
@@ -46,8 +50,12 @@ public class ScheduledRepricingWorkflow extends StandardRepricingWorkflow {
         if (scheduledTask != null) {
             throw new IllegalStateException("Schedule already started");
         }
+        scheduledSkus = skus;
         scheduledTask = scheduler.scheduleAtFixedRate(
-                () -> skus.forEach(this::repriceSafely),
+                () -> {
+                    lastRunAt = Instant.now();
+                    skus.forEach(this::repriceSafely);
+                },
                 initialDelay,
                 period,
                 unit);
@@ -62,9 +70,36 @@ public class ScheduledRepricingWorkflow extends StandardRepricingWorkflow {
         scheduler.shutdown();
     }
 
+    /** Whether the periodic sweep is currently running (started and not since cancelled). */
+    public boolean isActive() {
+        return scheduledTask != null && !scheduledTask.isCancelled();
+    }
+
+    /** The SKUs this schedule sweeps every run. */
+    public Collection<String> getScheduledSkus() {
+        return scheduledSkus;
+    }
+
+    /** When the sweep last fired, or null if it hasn't run yet. */
+    public Instant getLastRunAt() {
+        return lastRunAt;
+    }
+
+    /**
+     * When the sweep is next due to fire, computed from the executor's own remaining delay
+     * (rather than re-deriving it from lastRunAt + period) so it stays accurate even if a run
+     * took a while or the schedule hasn't fired for the first time yet.
+     */
+    public Instant getNextRunAt() {
+        if (!isActive()) {
+            return null;
+        }
+        return Instant.now().plusMillis(scheduledTask.getDelay(TimeUnit.MILLISECONDS));
+    }
+
     private void repriceSafely(String sku) {
         try {
-            reprice(sku);
+            reprice(sku, "SCHEDULED");
         } catch (RuntimeException e) {
             logger.warning("Scheduled reprice failed for " + sku + ": " + e.getMessage());
         }

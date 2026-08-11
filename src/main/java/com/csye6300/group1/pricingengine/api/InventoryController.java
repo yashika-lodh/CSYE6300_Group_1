@@ -5,9 +5,9 @@ import com.csye6300.group1.pricingengine.inventory.Inventory;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * REST facade over the Singleton Inventory. Stock changes made here flow
@@ -52,17 +52,27 @@ public class InventoryController {
     /**
      * Applies a relative delta (positive = restock, negative = sale).
      * A sale (negative delta) also records a DemandDataPoint so the
-     * DemandForecaster sees real, evolving demand instead of static seed data.
+     * DemandForecaster sees real, evolving demand instead of static seed data --
+     * but records the units actually removed from stock, not the raw requested
+     * delta. Inventory.adjustStock() clamps at 0, so requesting to sell more
+     * than is in stock (e.g. -10 against a stock of 2) only actually sells 2;
+     * recording "10 sold" would overstate demand for a sale that didn't happen.
      */
     @PostMapping("/{sku}/adjust")
     public Map<String, Object> adjustStock(@PathVariable String sku, @RequestParam int delta) {
+        int stockBefore = inventory.getStock(sku);
         inventory.adjustStock(sku, delta);
+        int stockAfter = inventory.getStock(sku);
 
         if (delta < 0) {
-            List<DemandDataPoint> history = demandHistoryBySku.computeIfAbsent(sku, s -> new ArrayList<>());
-            history.add(new DemandDataPoint(sku, LocalDate.now(), -delta));
+            int unitsActuallySold = stockBefore - stockAfter;
+            if (unitsActuallySold > 0) {
+                List<DemandDataPoint> history =
+                        demandHistoryBySku.computeIfAbsent(sku, s -> new CopyOnWriteArrayList<>());
+                history.add(new DemandDataPoint(sku, LocalDate.now(), unitsActuallySold));
+            }
         }
 
-        return Map.of("sku", sku, "quantity", inventory.getStock(sku));
+        return Map.of("sku", sku, "quantity", stockAfter);
     }
 }

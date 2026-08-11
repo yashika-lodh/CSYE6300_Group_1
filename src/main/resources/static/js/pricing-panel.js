@@ -31,8 +31,9 @@ const PricingPanel = (() => {
 
   function rowHtml(sku, channel, price, showRepriceButton, failed = false) {
     const priceDisplay = failed ? "—" : (price != null ? `$${Number(price).toFixed(2)}` : "—");
-    const repriceButton = showRepriceButton
-      ? `<button data-action="reprice" data-sku="${sku}">Reprice now</button>`
+    const actions = showRepriceButton
+      ? `<button data-action="reprice" data-sku="${sku}">Reprice now</button>
+         <button class="secondary" data-action="undo" data-sku="${sku}">Undo last</button>`
       : "";
 
     return `
@@ -40,7 +41,7 @@ const PricingPanel = (() => {
         <td>${sku}</td>
         <td>${channel}</td>
         <td class="price-cell">${priceDisplay}</td>
-        <td>${repriceButton}</td>
+        <td>${actions}</td>
       </tr>`;
   }
 
@@ -58,6 +59,9 @@ const PricingPanel = (() => {
 
     tbody.querySelectorAll("button[data-action='reprice']").forEach((btn) => {
       btn.addEventListener("click", onRepriceClick);
+    });
+    tbody.querySelectorAll("button[data-action='undo']").forEach((btn) => {
+      btn.addEventListener("click", onUndoClick);
     });
   }
 
@@ -79,6 +83,29 @@ const PricingPanel = (() => {
       Dashboard.showError(`Couldn't reprice ${sku}: ${err.message}`);
       btn.disabled = false;
       btn.textContent = "Reprice now";
+    } finally {
+      Dashboard.endManualAction();
+    }
+  }
+
+  async function onUndoClick(event) {
+    const btn = event.currentTarget;
+    const sku = btn.dataset.sku;
+
+    btn.disabled = true;
+    btn.textContent = "Undoing…";
+    Dashboard.beginManualAction();
+    try {
+      await Api.undo(sku);
+      await render();
+      if (window.AuditPanel) {
+        await window.AuditPanel.render();
+      }
+    } catch (err) {
+      console.error("Failed to undo", sku, err);
+      Dashboard.showError(`Couldn't undo ${sku}: ${err.message}`);
+      btn.disabled = false;
+      btn.textContent = "Undo last";
     } finally {
       Dashboard.endManualAction();
     }

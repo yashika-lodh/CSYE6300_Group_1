@@ -14,7 +14,12 @@
  *
  *   GET  /api/pricing/{sku}             -> { sku, prices: { [channel]: price } }
  *   POST /api/pricing/{sku}/reprice     -> { sku, prices: { [channel]: price } }
+ *   POST /api/pricing/{sku}/undo        -> { sku, prices: { [channel]: price } }
+ *                                           (409 with { sku, message } if there's nothing to undo)
  *   GET  /api/pricing/{sku}/forecast    -> { sku, trend, strategy }  (read-only, no reprice triggered)
+ *   GET  /api/pricing/scheduled-status  -> { active: bool, skus: string[], lastRunAt: ISO|null, nextRunAt: ISO|null }
+ *
+ *   GET  /api/system/status             -> { persistenceEnabled: bool, serverStartedAt: ISO timestamp }
  *
  *   GET  /api/audit                     -> string[]  (raw AuditLoggingCommandDecorator lines,
  *                                           e.g. "[2026-08-09T22:10:21.588Z] EXECUTE sku=SKU-1001
@@ -86,6 +91,21 @@ const Api = (() => {
     return request(`/api/pricing/${encodeURIComponent(sku)}/forecast`);
   }
 
+  /** Undoes the SKU's most recent reprice (Command pattern). Rejects with a 409 message if there's nothing to undo. */
+  function undo(sku) {
+    return request(`/api/pricing/${encodeURIComponent(sku)}/undo`, { method: "POST" });
+  }
+
+  /** { active, skus, lastRunAt, nextRunAt } for ScheduledRepricingWorkflow's periodic sweep. */
+  function getScheduledStatus() {
+    return request(`/api/pricing/scheduled-status`);
+  }
+
+  /** { persistenceEnabled, serverStartedAt } -- static for the life of the server, fetched once on load. */
+  function getSystemStatus() {
+    return request(`/api/system/status`);
+  }
+
   /** Full audit trail as raw log-line strings. */
   function getAuditReport() {
     return request(`/api/audit`);
@@ -131,10 +151,10 @@ const Api = (() => {
 
   return {
     getAllInventory, getInventory, adjustStock, setStock,
-    getPrices, reprice, getForecast,
+    getPrices, reprice, undo, getForecast, getScheduledStatus,
     getAuditReport, getAuditReportForSku,
     upsertPricingInputs, getPricingInputs,
     recordDemand, getDemandHistory,
-    seedDemoData,
+    seedDemoData, getSystemStatus,
   };
 })();

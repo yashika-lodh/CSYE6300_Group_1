@@ -19,6 +19,6 @@ public class RepricingTriggerObserver implements InventoryObserver {
 
     @Override
     public void onStockChanged(StockChangeEvent event) {
-        workflow.reprice(event.getSku());
+        workflow.reprice(event.getSku(), "AUTO");
     }
 }

@@ -3,6 +3,7 @@ package com.csye6300.group1.pricingengine.workflow;
 import com.csye6300.group1.pricingengine.audit.AuditLoggingCommandDecorator;
 import com.csye6300.group1.pricingengine.channel.ChannelManager;
 import com.csye6300.group1.pricingengine.channel.SalesChannel;
+import com.csye6300.group1.pricingengine.command.PricingCommand;
 import com.csye6300.group1.pricingengine.command.PricingCommandInvoker;
 import com.csye6300.group1.pricingengine.command.UpdatePriceCommand;
 import com.csye6300.group1.pricingengine.forecast.DemandDataPoint;
@@ -13,6 +14,7 @@ import com.csye6300.group1.pricingengine.pricing.PricingContext;
 import com.csye6300.group1.pricingengine.pricing.PricingStrategy;
 import com.csye6300.group1.pricingengine.selector.PricingStrategySelector;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -82,10 +84,16 @@ public class StandardRepricingWorkflow extends RepricingWorkflow {
         PricingStrategy strategy = strategySelector.selectStrategy(trend);
         double newPrice = strategy.calculatePrice(context);
 
+        // Every channel's command is bundled into one batch, run atomically via
+        // executeCommands() -- so a single Undo reverses this whole reprice (every
+        // channel), not just one channel's price, regardless of where in the shared
+        // multi-SKU undo stack this batch ends up sitting.
+        List<PricingCommand> commands = new ArrayList<>();
         for (SalesChannel channel : channelManager.getChannels()) {
-            AuditLoggingCommandDecorator loggedCommand =
-                    new AuditLoggingCommandDecorator(new UpdatePriceCommand(channel, sku, newPrice));
-            invoker.executeCommand(loggedCommand);
+            commands.add(new AuditLoggingCommandDecorator(new UpdatePriceCommand(channel, sku, newPrice), currentSource()));
+        }
+        invoker.executeCommands(commands);
+        for (SalesChannel channel : channelManager.getChannels()) {
             channel.publishPrice(sku);
         }
 
