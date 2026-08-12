@@ -1,109 +1,159 @@
 /**
- * guardrails-panel.js — the brand-positioning guardrails view/edit panel:
- * shows every tracked SKU's current min/max price bounds (read via
- * GET /api/pricing-inputs/{sku}) next to its current price, with inline
- * inputs to edit min/max and save them (PUT /api/pricing-inputs/{sku},
- * passing only minPrice/maxPrice so every other pricing input is left
- * untouched). Reuses InventoryPanel's tracked-SKU list, same as the other
- * per-SKU panels.
- *
- * The "status" column is a client-side heuristic, not a backend field: a
- * price sitting at (or past) a configured bound is flagged as "At floor" /
- * "At ceiling" rather than "Within range", so it's visually obvious a
- * guardrail is the reason a price didn't move further with demand.
+ * Panel 4 — Brand-Positioning Guardrails Panel
  */
 
-const GuardrailsPanel = (() => {
+window.GuardrailsPanelModule = {
+  currentPage: 1,
+  PAGE_SIZE: 8,
 
-  const EPSILON = 0.005;
+  async refresh() {
+    const tableBody = document.getElementById('guardrails-table-body');
+    const paginationEl = document.getElementById('guardrails-pagination');
+    if (!tableBody) return;
 
-  function statusFor(price, minPrice, maxPrice) {
-    if (price == null) return { label: "—", cls: "" };
-    if (minPrice > 0 && price <= minPrice + EPSILON) return { label: "At floor", cls: "guardrail-floor" };
-    if (maxPrice > 0 && price >= maxPrice - EPSILON) return { label: "At ceiling", cls: "guardrail-ceiling" };
-    if (minPrice > 0 || maxPrice > 0) return { label: "Within range", cls: "guardrail-ok" };
-    return { label: "No guardrail set", cls: "" };
-  }
-
-  function rowHtml(sku, currentPrice, minPrice, maxPrice, failed = false) {
-    if (failed) {
-      return `<tr data-sku="${sku}"><td>${sku}</td><td colspan="5">—</td></tr>`;
-    }
-    const priceDisplay = currentPrice != null ? `$${Number(currentPrice).toFixed(2)}` : "—";
-    const status = statusFor(currentPrice, minPrice, maxPrice);
-
-    return `
-      <tr data-sku="${sku}">
-        <td>${sku}</td>
-        <td>${priceDisplay}</td>
-        <td><input type="number" step="0.01" class="guardrail-input" data-field="min" data-sku="${sku}" value="${minPrice > 0 ? minPrice : ""}" placeholder="unset" /></td>
-        <td><input type="number" step="0.01" class="guardrail-input" data-field="max" data-sku="${sku}" value="${maxPrice > 0 ? maxPrice : ""}" placeholder="unset" /></td>
-        <td><span class="guardrail-status ${status.cls}">${status.label}</span></td>
-        <td><button class="secondary" data-action="save-guardrail" data-sku="${sku}">Save</button></td>
-      </tr>`;
-  }
-
-  async function renderRowForSku(sku) {
-    try {
-      const [inputs, priceData] = await Promise.all([
-        Api.getPricingInputs(sku),
-        Api.getPrices(sku),
-      ]);
-      const prices = priceData.prices || {};
-      const firstPrice = Object.values(prices)[0] ?? null;
-      return rowHtml(sku, firstPrice, inputs.minPrice, inputs.maxPrice);
-    } catch (err) {
-      console.error("Failed to load guardrails for", sku, err);
-      return rowHtml(sku, null, 0, 0, true);
-    }
-  }
-
-  async function render() {
-    const tbody = document.getElementById("guardrails-rows");
-    const skus = window.InventoryPanel ? window.InventoryPanel.getTrackedSkus() : [];
-
-    if (skus.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No SKUs tracked yet — add one in the Inventory panel.</td></tr>`;
+    const trackedSkus = Array.from(window.TrackedSkus);
+    if (trackedSkus.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="6" class="state-unavailable">No tracked SKUs available.</td></tr>`;
+      if (paginationEl) paginationEl.innerHTML = '';
       return;
     }
 
-    const rows = await Promise.all(skus.map(renderRowForSku));
-    tbody.innerHTML = rows.join("");
+    const { pageItems: pagedSkus, currentPage, totalPages, totalItems } =
+      window.Paginator.slice(trackedSkus, this.currentPage, this.PAGE_SIZE);
+    this.currentPage = currentPage;
 
-    tbody.querySelectorAll("button[data-action='save-guardrail']").forEach((btn) => {
-      btn.addEventListener("click", onSaveClick);
-    });
-  }
+    let rowsHtml = '';
 
-  async function onSaveClick(event) {
-    const btn = event.currentTarget;
-    const sku = btn.dataset.sku;
-    const row = btn.closest("tr");
-    const minInput = row.querySelector('input[data-field="min"]');
-    const maxInput = row.querySelector('input[data-field="max"]');
+    for (const sku of pagedSkus) {
+      try {
+        // Fetch current pricing & inputs for the SKU
+        let currentPrice = null;
+        let minPrice = null;
+        let maxPrice = null;
 
-    const minPrice = minInput.value.trim() === "" ? undefined : Number(minInput.value);
-    const maxPrice = maxInput.value.trim() === "" ? undefined : Number(maxInput.value);
+        try {
+          // Real shape from PricingController: { sku, prices: { "Shopify": 24.30, ... } }
+          // -- every channel gets the same price after a reprice, so any one of them
+          // represents "the current price" for guardrail comparison purposes.
+          const pricingData = await window.API.getPricing(sku);
+          if (pricingData && pricingData.prices && typeof pricingData.prices === 'object') {
+            const values = Object.values(pricingData.prices);
+            if (values.length > 0 && typeof values[0] === 'number') {
+              currentPrice = values[0];
+            }
+          }
+        } catch (e) {
+          // ignore error
+        }
 
-    btn.disabled = true;
-    btn.textContent = "Saving…";
-    Dashboard.beginManualAction();
-    try {
-      await Api.upsertPricingInputs(sku, { minPrice, maxPrice });
-      await render();
-      if (window.PricingPanel) await window.PricingPanel.render();
-      if (window.ForecastPanel) await window.ForecastPanel.render();
-    } catch (err) {
-      console.error("Failed to save guardrails for", sku, err);
-      Dashboard.showError(`Couldn't save guardrails for ${sku}: ${err.message}`);
-      btn.disabled = false;
-      btn.textContent = "Save";
-    } finally {
-      Dashboard.endManualAction();
+        try {
+          // Real persisted values from PricingInputsController, not just whatever this
+          // page session happens to have cached -- otherwise a reload always shows blank
+          // guardrails even when they're actually configured server-side. 0 means "unset"
+          // in this backend's convention (PricingContext.hasMinPrice()/hasMaxPrice()).
+          const inputs = await window.API.getPricingInputs(sku);
+          minPrice = inputs && inputs.minPrice > 0 ? inputs.minPrice : null;
+          maxPrice = inputs && inputs.maxPrice > 0 ? inputs.maxPrice : null;
+          if (!window.SkuInputsMap) window.SkuInputsMap = new Map();
+          window.SkuInputsMap.set(sku, { ...(window.SkuInputsMap.get(sku) || {}), minPrice, maxPrice });
+        } catch (e) {
+          // Backend fetch failed -- fall back to whatever's cached from this session
+          // rather than showing nothing.
+          const storedInputs = window.SkuInputsMap?.get(sku) || {};
+          minPrice = storedInputs.minPrice ?? null;
+          maxPrice = storedInputs.maxPrice ?? null;
+        }
+
+        // Compute client-side guardrail status
+        const statusBadge = this.computeGuardrailStatus(currentPrice, minPrice, maxPrice);
+
+        const currentPriceFormatted = currentPrice !== null && !isNaN(currentPrice) ? `$${Number(currentPrice).toFixed(2)}` : '—';
+        const minVal = minPrice !== null && !isNaN(minPrice) ? minPrice : '';
+        const maxVal = maxPrice !== null && !isNaN(maxPrice) ? maxPrice : '';
+
+        rowsHtml += `
+          <tr>
+            <td class="code-font">${this.escapeHtml(sku)}</td>
+            <td><strong>${currentPriceFormatted}</strong></td>
+            <td>
+              <input type="number" step="0.01" class="form-input" style="width: 100px; padding: 0.3rem;"
+                id="guardrail-min-${this.escapeHtml(sku)}" value="${minVal}" placeholder="Min $">
+            </td>
+            <td>
+              <input type="number" step="0.01" class="form-input" style="width: 100px; padding: 0.3rem;"
+                id="guardrail-max-${this.escapeHtml(sku)}" value="${maxVal}" placeholder="Max $">
+            </td>
+            <td>${statusBadge}</td>
+            <td>
+              <button class="btn btn-primary btn-sm" onclick="window.GuardrailsPanelModule.saveGuardrails('${this.escapeHtml(sku)}')">
+                Save
+              </button>
+            </td>
+          </tr>
+        `;
+      } catch (err) {
+        rowsHtml += `
+          <tr>
+            <td class="code-font">${this.escapeHtml(sku)}</td>
+            <td colspan="5" class="state-unavailable">Guardrail details unavailable</td>
+          </tr>
+        `;
+      }
     }
+
+    tableBody.innerHTML = rowsHtml;
+
+    if (paginationEl) {
+      paginationEl.innerHTML = window.Paginator.renderControls({ currentPage, totalPages, totalItems });
+      window.Paginator.attach(paginationEl, this);
+    }
+  },
+
+  computeGuardrailStatus(currentPrice, minPrice, maxPrice) {
+    const min = minPrice !== null && !isNaN(minPrice) && minPrice !== '' ? Number(minPrice) : null;
+    const max = maxPrice !== null && !isNaN(maxPrice) && maxPrice !== '' ? Number(maxPrice) : null;
+    const price = currentPrice !== null && !isNaN(currentPrice) ? Number(currentPrice) : null;
+
+    if (min === null && max === null) {
+      return `<span class="badge badge-gray">No guardrail set</span>`;
+    }
+
+    if (price === null) {
+      return `<span class="badge badge-gray">No price data</span>`;
+    }
+
+    if (min !== null && price <= min) {
+      return `<span class="badge badge-red">At floor</span>`;
+    }
+
+    if (max !== null && price >= max) {
+      return `<span class="badge badge-red">At ceiling</span>`;
+    }
+
+    return `<span class="badge badge-green">Within range</span>`;
+  },
+
+  async saveGuardrails(sku) {
+    const minEl = document.getElementById(`guardrail-min-${sku}`);
+    const maxEl = document.getElementById(`guardrail-max-${sku}`);
+
+    const minPrice = minEl?.value !== '' ? minEl.value : null;
+    const maxPrice = maxEl?.value !== '' ? maxEl.value : null;
+
+    // Cache locally in SkuInputsMap
+    if (!window.SkuInputsMap) window.SkuInputsMap = new Map();
+    const existing = window.SkuInputsMap.get(sku) || {};
+    window.SkuInputsMap.set(sku, { ...existing, minPrice, maxPrice });
+
+    try {
+      await window.API.savePricingInputs(sku, { minPrice, maxPrice });
+      if (window.refreshAllPanels) window.refreshAllPanels();
+    } catch (err) {
+      alert(`Failed to save guardrails for ${sku}: ${err.message || 'Error'}`);
+    }
+  },
+
+  escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
-
-  return { render };
-})();
-
-window.GuardrailsPanel = GuardrailsPanel;
+};

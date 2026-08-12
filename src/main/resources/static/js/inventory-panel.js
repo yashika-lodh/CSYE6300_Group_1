@@ -1,156 +1,107 @@
 /**
- * inventory-panel.js — renders the Inventory panel: current stock for every
- * SKU the backend already knows about (via GET /api/inventory, which
- * returns the full Inventory singleton snapshot), plus +/- controls to
- * adjust stock. After any adjustment, re-fetches so the panel reflects
- * whatever the backend's Observer-triggered reprice just did.
- *
- * Also looks up each SKU's optional display name (GET /api/pricing-inputs/{sku}
- * -- cosmetic only, never used in pricing math) so the table reads like a
- * product catalog ("Trail Runner Sneakers SNK-2210") instead of bare codes.
- * Names are cached per SKU for the page's lifetime since they rarely change.
+ * Panel 2 — Inventory Panel
  */
 
-const InventoryPanel = (() => {
-  // Manually-added SKUs not yet known to the backend snapshot (e.g. a brand
-  // new SKU with no stock recorded yet). Merged with the live snapshot on render.
-  let manuallyTrackedSkus = [];
-  let lastKnownSkus = [];
-  const nameBySku = new Map();
+window.InventoryPanelModule = {
+  currentPage: 1,
+  PAGE_SIZE: 5,
 
-  function getTrackedSkus() {
-    return [...lastKnownSkus];
-  }
-
-  function trackSku(sku) {
-    if (sku && !manuallyTrackedSkus.includes(sku) && !lastKnownSkus.includes(sku)) {
-      manuallyTrackedSkus.push(sku);
+  init() {
+    const addSkuBtn = document.getElementById('btn-add-track-sku');
+    if (addSkuBtn) {
+      addSkuBtn.addEventListener('click', () => this.handleAddTrackSku());
     }
-  }
+  },
 
-  /** Cached display name for a SKU, or null if none was ever set. */
-  function getDisplayName(sku) {
-    return nameBySku.get(sku) || null;
-  }
+  async refresh() {
+    const tableBody = document.getElementById('inventory-table-body');
+    const paginationEl = document.getElementById('inventory-pagination');
 
-  async function loadNames(skus) {
-    const unknown = skus.filter((sku) => !nameBySku.has(sku));
-    if (unknown.length === 0) return;
+    if (!tableBody) return;
 
-    await Promise.all(unknown.map(async (sku) => {
-      try {
-        const inputs = await Api.getPricingInputs(sku);
-        nameBySku.set(sku, inputs.name || null);
-      } catch (err) {
-        nameBySku.set(sku, null);
-      }
-    }));
-  }
-
-  function rowHtml(sku, quantity, failed = false) {
-    const qtyDisplay = failed ? "—" : quantity;
-    const name = getDisplayName(sku);
-    const skuLabel = name
-      ? `${name} <span class="sku-code">${sku}</span>`
-      : sku;
-    return `
-      <tr data-sku="${sku}">
-        <td>${skuLabel}</td>
-        <td class="qty-cell">${qtyDisplay}</td>
-        <td>
-          <div class="qty-controls">
-            <button class="secondary" data-action="decrement" data-sku="${sku}">-5</button>
-            <button class="secondary" data-action="increment" data-sku="${sku}">+5</button>
-          </div>
-        </td>
-      </tr>`;
-  }
-
-  async function render() {
-    const tbody = document.getElementById("inventory-rows");
-
-    let snapshot = {};
     try {
-      snapshot = await Api.getAllInventory(); // { sku: quantity, ... }
-    } catch (err) {
-      console.error("Failed to load inventory snapshot", err);
-      Dashboard.showError(`Couldn't load inventory: ${err.message}`);
-    }
+      const data = await window.API.getInventory();
 
-    const skusFromBackend = Object.keys(snapshot);
-    lastKnownSkus = [...new Set([...skusFromBackend, ...manuallyTrackedSkus])];
-
-    if (lastKnownSkus.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="3">No SKUs yet — add one above.</td></tr>`;
-      return;
-    }
-
-    await loadNames(lastKnownSkus);
-
-    const rows = lastKnownSkus.map((sku) => rowHtml(sku, snapshot[sku] ?? 0, !(sku in snapshot) && !manuallyTrackedSkus.includes(sku)));
-    tbody.innerHTML = rows.join("");
-
-    tbody.querySelectorAll("button[data-action]").forEach((btn) => {
-      btn.addEventListener("click", onAdjustClick);
-    });
-  }
-
-  async function onAdjustClick(event) {
-    const btn = event.currentTarget;
-    const sku = btn.dataset.sku;
-    const delta = btn.dataset.action === "increment" ? 5 : -5;
-
-    btn.disabled = true;
-    Dashboard.beginManualAction();
-    try {
-      await Api.adjustStock(sku, delta);
-      // Stock change may have triggered a reprice on the backend (Observer
-      // pattern) — refresh every panel so the dashboard reflects it.
-      await render();
-      if (window.PricingPanel) {
-        await window.PricingPanel.render();
+      // Parse inventory items
+      let items = [];
+      if (Array.isArray(data)) {
+        items = data;
+      } else if (data && typeof data === 'object') {
+        // If key-value map like {"SKU-101": 50}
+        items = Object.entries(data).map(([sku, stock]) => ({ sku, stock }));
       }
-      if (window.ForecastPanel) {
-        await window.ForecastPanel.render();
+
+      // Add returned SKUs to tracked SKUs
+      items.forEach(item => window.TrackedSkus.add(item.sku));
+
+      // Filter or ensure all tracked SKUs are in the inventory view
+      const knownSkus = Array.from(window.TrackedSkus);
+      if (knownSkus.length === 0 && items.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="3" class="state-unavailable">No inventory items tracked yet. Add a SKU above.</td></tr>`;
+        if (paginationEl) paginationEl.innerHTML = '';
+        return;
+      }
+
+      // Build unified list of SKU -> stock
+      const inventoryMap = new Map();
+      items.forEach(i => inventoryMap.set(i.sku, i.stock));
+
+      const { pageItems, currentPage, totalPages, totalItems } =
+        window.Paginator.slice(knownSkus, this.currentPage, this.PAGE_SIZE);
+      this.currentPage = currentPage;
+
+      let rowsHtml = '';
+      pageItems.forEach(sku => {
+        const stockVal = inventoryMap.has(sku) ? inventoryMap.get(sku) : '—';
+        const isAvailable = stockVal !== '—';
+
+        rowsHtml += `
+          <tr>
+            <td class="code-font">${this.escapeHtml(sku)}</td>
+            <td><strong>${isAvailable ? stockVal : '<span class="text-muted">—</span>'}</strong></td>
+            <td>
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary btn-sm" onclick="window.InventoryPanelModule.adjustStock('${this.escapeHtml(sku)}', -5)">-5</button>
+                <button class="btn btn-secondary btn-sm" onclick="window.InventoryPanelModule.adjustStock('${this.escapeHtml(sku)}', 5)">+5</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      tableBody.innerHTML = rowsHtml;
+
+      if (paginationEl) {
+        paginationEl.innerHTML = window.Paginator.renderControls({ currentPage, totalPages, totalItems });
+        window.Paginator.attach(paginationEl, this);
       }
     } catch (err) {
-      console.error("Failed to adjust stock for", sku, err);
-      Dashboard.showError(`Couldn't adjust stock for ${sku}: ${err.message}`);
-    } finally {
-      btn.disabled = false;
-      Dashboard.endManualAction();
+      console.warn('[InventoryPanel] Error fetching inventory:', err);
+      tableBody.innerHTML = `<tr><td colspan="3" class="state-unavailable">Inventory data unavailable (${err.status || 'Error'}).</td></tr>`;
+      if (paginationEl) paginationEl.innerHTML = '';
     }
+  },
+
+  handleAddTrackSku() {
+    const input = document.getElementById('input-track-sku');
+    const sku = input?.value?.trim();
+    if (sku) {
+      window.TrackedSkus.add(sku);
+      input.value = '';
+      if (window.refreshAllPanels) window.refreshAllPanels();
+    }
+  },
+
+  async adjustStock(sku, delta) {
+    try {
+      await window.API.adjustInventory(sku, delta);
+      if (window.refreshAllPanels) window.refreshAllPanels();
+    } catch (err) {
+      alert(`Failed to adjust stock for ${sku}: ${err.message || 'Error'}`);
+    }
+  },
+
+  escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
-
-  function wireToolbar() {
-    const input = document.getElementById("inventory-sku-input");
-    const addBtn = document.getElementById("inventory-lookup-btn");
-
-    addBtn.addEventListener("click", async () => {
-      const sku = input.value.trim();
-      if (!sku) return;
-      trackSku(sku);
-      input.value = "";
-      Dashboard.beginManualAction();
-      try {
-        await render();
-        if (window.PricingPanel) {
-          await window.PricingPanel.render();
-        }
-        if (window.ForecastPanel) {
-          await window.ForecastPanel.render();
-        }
-      } finally {
-        Dashboard.endManualAction();
-      }
-    });
-
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") addBtn.click();
-    });
-  }
-
-  return { render, wireToolbar, getTrackedSkus, trackSku, getDisplayName };
-})();
-
-window.InventoryPanel = InventoryPanel;
+};

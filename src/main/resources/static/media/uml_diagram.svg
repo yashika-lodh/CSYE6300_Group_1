@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="100%" height="100%" style="background-color: #0f172a; font-family: system-ui, -apple-system, sans-serif;">
+  <defs>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#60a5fa" />
+    </marker>
+    <marker id="dashedArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#a7f3d0" />
+    </marker>
+  </defs>
+
+  <!-- Title & Banner -->
+  <rect x="0" y="0" width="1200" height="60" fill="#1e293b" opacity="0.8"/>
+  <text x="40" y="38" fill="#f8fafc" font-size="20" font-weight="700" letter-spacing="0.5">DYNAMIC PRICING ENGINE — SYSTEM ARCHITECTURE &amp; DESIGN PATTERNS</text>
+  <text x="1160" y="38" fill="#94a3b8" font-size="14" font-weight="500" text-anchor="end">CSYE 6300 — Group 1</text>
+
+  <!-- Pipeline Flow Background Track -->
+  <rect x="40" y="80" width="1120" height="555" rx="12" fill="#131d31" stroke="#334155" stroke-width="1.5"/>
+
+  <!-- Stage 1: Demand Ingestion & Adapter -->
+  <g filter="url(#shadow)">
+    <rect x="70" y="110" width="220" height="230" rx="8" fill="url(#cardBg)" stroke="#3b82f6" stroke-width="1.5"/>
+    <rect x="70" y="110" width="220" height="32" rx="8" fill="#1e3a8a"/>
+    <text x="80" y="131" fill="#60a5fa" font-size="12" font-weight="700">ADAPTER PATTERN</text>
+    <text x="80" y="165" fill="#f8fafc" font-size="15" font-weight="700">DemandSignalAdapter</text>
+    <line x1="70" y1="175" x2="290" y2="175" stroke="#334155"/>
+    <text x="80" y="195" fill="#94a3b8" font-size="12">+ parseCsvFeed(File)</text>
+    <text x="80" y="215" fill="#94a3b8" font-size="12">+ normalize(RawFeed)</text>
+    <text x="80" y="235" fill="#94a3b8" font-size="12">+ calculateTrend()</text>
+    <line x1="70" y1="245" x2="290" y2="245" stroke="#334155"/>
+    <rect x="80" y="260" width="200" height="65" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="90" y="280" fill="#38bdf8" font-size="11" font-weight="600">Repository Pattern:</text>
+    <text x="90" y="300" fill="#cbd5e1" font-size="11">DemandSignalRepository</text>
+  </g>
+
+  <!-- Arrow Stage 1 -> 2 -->
+  <path d="M 290 225 L 350 225" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 2: Workflow & Strategy -->
+  <g filter="url(#shadow)">
+    <rect x="350" y="110" width="260" height="230" rx="8" fill="url(#cardBg)" stroke="#6366f1" stroke-width="1.5"/>
+    <rect x="350" y="110" width="260" height="32" rx="8" fill="#312e81"/>
+    <text x="360" y="131" fill="#a5b4fc" font-size="12" font-weight="700">TEMPLATE METHOD &amp; STRATEGY</text>
+    <text x="360" y="165" fill="#f8fafc" font-size="15" font-weight="700">RepricingWorkflow</text>
+    <text x="360" y="183" fill="#cbd5e1" font-size="11" font-style="italic">&lt;&lt;abstract template&gt;&gt;</text>
+    <line x1="350" y1="192" x2="610" y2="192" stroke="#334155"/>
+    <text x="360" y="212" fill="#94a3b8" font-size="12"># executeWorkflow(sku)</text>
+    <text x="360" y="232" fill="#94a3b8" font-size="12">+ PricingStrategySelector</text>
+    <line x1="350" y1="242" x2="610" y2="242" stroke="#334155"/>
+    <rect x="360" y="255" width="240" height="70" rx="6" fill="#0f172a" stroke="#312e81"/>
+    <text x="370" y="275" fill="#818cf8" font-size="11" font-weight="600">Strategies (Surge/Discount/Stable)</text>
+    <text x="370" y="295" fill="#cbd5e1" font-size="11">HighDemandSurgeStrategy</text>
+    <text x="370" y="312" fill="#cbd5e1" font-size="11">CompetitiveMatchStrategy</text>
+  </g>
+
+  <!-- Arrow Stage 2 -> 3 -->
+  <path d="M 610 225 L 670 225" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 3: Command & Decorator -->
+  <g filter="url(#shadow)">
+    <rect x="670" y="110" width="240" height="230" rx="8" fill="url(#cardBg)" stroke="#8b5cf6" stroke-width="1.5"/>
+    <rect x="670" y="110" width="240" height="32" rx="8" fill="#4c1d95"/>
+    <text x="680" y="131" fill="#c084fc" font-size="12" font-weight="700">COMMAND &amp; DECORATOR</text>
+    <text x="680" y="165" fill="#f8fafc" font-size="15" font-weight="700">PricingCommandInvoker</text>
+    <line x1="670" y1="175" x2="910" y2="175" stroke="#334155"/>
+    <text x="680" y="195" fill="#94a3b8" font-size="12">+ execute(PricingCommand)</text>
+    <text x="680" y="215" fill="#94a3b8" font-size="12">+ undoLastCommand()</text>
+    <line x1="670" y1="225" x2="910" y2="225" stroke="#334155"/>
+    <rect x="680" y="238" width="220" height="85" rx="6" fill="#0f172a" stroke="#4c1d95"/>
+    <text x="690" y="258" fill="#d8b4fe" font-size="11" font-weight="600">AuditLoggingCommandDecorator</text>
+    <text x="690" y="278" fill="#cbd5e1" font-size="11">wraps: UpdatePriceCommand</text>
+    <text x="690" y="298" fill="#cbd5e1" font-size="11">logs compliance + executes</text>
+  </g>
+
+  <!-- Arrow Stage 3 -> 4 -->
+  <path d="M 910 225 L 960 225" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 4: Factory & Channels -->
+  <g filter="url(#shadow)">
+    <rect x="960" y="110" width="170" height="230" rx="8" fill="url(#cardBg)" stroke="#ec4899" stroke-width="1.5"/>
+    <rect x="960" y="110" width="170" height="32" rx="8" fill="#831843"/>
+    <text x="970" y="131" fill="#f472b6" font-size="11" font-weight="700">FACTORY METHOD</text>
+    <text x="970" y="165" fill="#f8fafc" font-size="14" font-weight="700">SalesChannelFactory</text>
+    <line x1="960" y1="175" x2="1130" y2="175" stroke="#334155"/>
+    <text x="970" y="195" fill="#cbd5e1" font-size="11">• Shopify Direct</text>
+    <text x="970" y="215" fill="#cbd5e1" font-size="11">• Own Web Store</text>
+    <text x="970" y="235" fill="#cbd5e1" font-size="11">• Social Commerce</text>
+    <line x1="960" y1="250" x2="1130" y2="250" stroke="#334155"/>
+    <text x="970" y="275" fill="#f472b6" font-size="11" font-weight="600">Dispatches Price</text>
+    <text x="970" y="295" fill="#94a3b8" font-size="11">to GraphQL / REST</text>
+  </g>
+
+  <!-- Bottom Section: Singleton & Observer Pattern Loop -->
+  <g filter="url(#shadow)">
+    <rect x="70" y="380" width="540" height="220" rx="8" fill="url(#cardBg)" stroke="#10b981" stroke-width="1.5"/>
+    <rect x="70" y="380" width="540" height="32" rx="8" fill="#064e3b"/>
+    <text x="80" y="401" fill="#34d399" font-size="12" font-weight="700">SINGLETON &amp; OBSERVER PATTERN FEEDBACK LOOP</text>
+
+    <!-- Singleton Class -->
+    <rect x="90" y="425" width="200" height="155" rx="6" fill="#0f172a" stroke="#047857"/>
+    <text x="100" y="445" fill="#6ee7b7" font-size="11" font-weight="700">&lt;&lt;Singleton&gt;&gt; Inventory</text>
+    <line x1="90" y1="453" x2="290" y2="453" stroke="#1e293b"/>
+    <text x="100" y="470" fill="#94a3b8" font-size="11">- stockMap: Map&lt;String, Integer&gt;</text>
+    <text x="100" y="488" fill="#94a3b8" font-size="11">- observers: List&lt;Observer&gt;</text>
+    <line x1="90" y1="496" x2="290" y2="496" stroke="#1e293b"/>
+    <text x="100" y="513" fill="#cbd5e1" font-size="11">+ getInstance(): Inventory</text>
+    <text x="100" y="531" fill="#cbd5e1" font-size="11">+ adjustStock(sku, delta)</text>
+    <text x="100" y="549" fill="#cbd5e1" font-size="11">+ notifyObservers(sku)</text>
+
+    <!-- Observer Subscribers -->
+    <rect x="320" y="425" width="270" height="70" rx="6" fill="#0f172a" stroke="#047857"/>
+    <text x="330" y="445" fill="#34d399" font-size="11" font-weight="700">RepricingTriggerObserver</text>
+    <text x="330" y="465" fill="#cbd5e1" font-size="11">Reacts to low/high stock changes and</text>
+    <text x="330" y="480" fill="#cbd5e1" font-size="11">triggers automated repricing workflow.</text>
+
+    <rect x="320" y="510" width="270" height="70" rx="6" fill="#0f172a" stroke="#047857"/>
+    <text x="330" y="530" fill="#34d399" font-size="11" font-weight="700">InventoryPersistenceObserver</text>
+    <text x="330" y="550" fill="#cbd5e1" font-size="11">Writes stock changes through to</text>
+    <text x="330" y="565" fill="#cbd5e1" font-size="11">InventoryRepository (JPA / H2 Database).</text>
+  </g>
+
+  <!-- Observer Feedback Connection Line -->
+  <path d="M 455 425 Q 455 350 480 340" stroke="#34d399" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#dashedArrow)"/>
+  <text x="470" y="365" fill="#a7f3d0" font-size="10" font-weight="600">Triggers Reprice</text>
+
+  <!-- Bottom Right: Persistence & Audit Layer -->
+  <g filter="url(#shadow)">
+    <rect x="670" y="380" width="460" height="220" rx="8" fill="url(#cardBg)" stroke="#f59e0b" stroke-width="1.5"/>
+    <rect x="670" y="380" width="460" height="32" rx="8" fill="#78350f"/>
+    <text x="680" y="401" fill="#fcd34d" font-size="12" font-weight="700">REPOSITORY PATTERN &amp; COMPLIANCE AUDIT STORE</text>
+
+    <rect x="690" y="430" width="200" height="150" rx="6" fill="#0f172a" stroke="#b45309"/>
+    <text x="700" y="450" fill="#fbbf24" font-size="12" font-weight="700">InventoryRepository</text>
+    <text x="700" y="470" fill="#cbd5e1" font-size="11">Spring Data JPA / H2</text>
+    <line x1="690" y1="480" x2="890" y2="480" stroke="#1e293b"/>
+    <text x="700" y="500" fill="#94a3b8" font-size="11">+ findBySku(String)</text>
+    <text x="700" y="520" fill="#94a3b8" font-size="11">+ save(InventoryItem)</text>
+    <text x="700" y="540" fill="#94a3b8" font-size="11">+ updateStock(sku, delta)</text>
+
+    <rect x="910" y="430" width="200" height="150" rx="6" fill="#0f172a" stroke="#b45309"/>
+    <text x="920" y="450" fill="#fbbf24" font-size="12" font-weight="700">AuditLogStore</text>
+    <text x="920" y="470" fill="#cbd5e1" font-size="11">Thread-safe Audit Trail</text>
+    <line x1="910" y1="480" x2="1110" y2="480" stroke="#1e293b"/>
+    <text x="920" y="500" fill="#94a3b8" font-size="11">+ record(AuditEntry)</text>
+    <text x="920" y="520" fill="#94a3b8" font-size="11">+ getLogsBySku(sku)</text>
+    <text x="920" y="540" fill="#94a3b8" font-size="11">+ getGlobalLog()</text>
+  </g>
+</svg>

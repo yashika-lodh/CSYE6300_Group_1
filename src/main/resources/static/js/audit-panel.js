@@ -1,109 +1,149 @@
 /**
- * audit-panel.js — renders the Audit Log panel from the real AuditController,
- * which returns raw formatted log lines (strings), not JSON objects, e.g.:
- *
- *   "[2026-08-09T22:10:21.588049Z] EXECUTE sku=SKU-1001 source=MANUAL originalPrice=24.99 newPrice=21.38"
- *
- * source is whatever triggered the reprice this entry came from -- "MANUAL" (a direct
- * Reprice-now/Undo click), "AUTO" (Observer-triggered by a stock change), or "SCHEDULED"
- * (the periodic sweep) -- rendered as its own Trigger column.
- *
- * This file parses that line format with a regex before rendering. If the
- * line doesn't match the expected shape, it's still shown (raw) rather than
- * silently dropped, so nothing gets hidden from the log.
- *
- * The SKU filter dropdown (populated from InventoryPanel's tracked-SKU list)
- * switches which endpoint render() calls -- GET /api/audit for "All SKUs",
- * GET /api/audit/{sku} for a specific one -- but reuses the same
- * parseLine/rowHtml pipeline either way.
+ * Panel 7 — Audit Log Panel (Compliance Trail & Filter)
  */
 
-const AuditPanel = (() => {
+window.AuditPanelModule = {
+  currentPage: 1,
+  PAGE_SIZE: 8,
 
-  // sku is captured non-greedily up to the " source=" anchor (not \S+) since a SKU
-  // entered with a space in it (e.g. "SKU 1003" instead of "SKU-1003") is still a
-  // valid string as far as the backend is concerned -- nothing validates SKU format --
-  // and would otherwise break this match, falling back to displaying the whole raw
-  // log line unparsed.
-  const LINE_PATTERN = /^\[(.+?)\]\s+(\S+)\s+sku=(.+?)\s+source=(\S+)\s+originalPrice=([\d.]+)\s+newPrice=([\d.]+)/;
-
-  function parseLine(line) {
-    const match = LINE_PATTERN.exec(line);
-    if (!match) {
-      return { raw: line };
+  init() {
+    const filterSelect = document.getElementById('audit-sku-filter');
+    if (filterSelect) {
+      filterSelect.addEventListener('change', () => {
+        this.currentPage = 1;
+        this.refresh();
+      });
     }
-    const [, timestamp, action, sku, source, originalPrice, newPrice] = match;
-    return { timestamp, action, sku, source, originalPrice: Number(originalPrice), newPrice: Number(newPrice) };
-  }
 
-  function rowHtml(entry) {
-    if (entry.raw) {
-      return `<tr><td colspan="6">${entry.raw}</td></tr>`;
+    const refreshBtn = document.getElementById('btn-refresh-audit');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => this.refresh());
     }
-    const timestamp = new Date(entry.timestamp).toLocaleString();
-    return `
-      <tr>
-        <td>${timestamp}</td>
-        <td>${entry.action}</td>
-        <td>${entry.sku}</td>
-        <td>${entry.source}</td>
-        <td>$${entry.originalPrice.toFixed(2)}</td>
-        <td>$${entry.newPrice.toFixed(2)}</td>
-      </tr>`;
-  }
+  },
 
-  /** Rebuilds the SKU filter's options from InventoryPanel's tracked-SKU list, preserving the current selection if it's still valid. */
-  function populateSkuFilter() {
-    const select = document.getElementById("audit-sku-filter");
-    const previousValue = select.value;
-    const trackedSkus = window.InventoryPanel ? window.InventoryPanel.getTrackedSkus() : [];
+  async refresh() {
+    this.updateSkuDropdown();
 
-    const options = [`<option value="">All SKUs</option>`]
-      .concat(trackedSkus.map((sku) => `<option value="${sku}">${sku}</option>`));
-    select.innerHTML = options.join("");
+    const tableBody = document.getElementById('audit-table-body');
+    const paginationEl = document.getElementById('audit-pagination');
+    const filterSelect = document.getElementById('audit-sku-filter');
+    if (!tableBody) return;
 
-    if (trackedSkus.includes(previousValue)) {
-      select.value = previousValue;
-    }
-  }
-
-  async function render() {
-    const tbody = document.getElementById("audit-rows");
-    populateSkuFilter();
-    const selectedSku = document.getElementById("audit-sku-filter").value;
+    const selectedSku = filterSelect?.value || 'ALL';
 
     try {
-      const lines = selectedSku
-        ? await Api.getAuditReportForSku(selectedSku) // string[], filtered to one SKU
-        : await Api.getAuditReport(); // string[], full log
+      const logsData = await window.API.getAuditLogs(selectedSku);
 
-      if (!lines || lines.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No audit entries yet.</td></tr>`;
+      let logEntries = [];
+      if (Array.isArray(logsData)) {
+        logEntries = logsData;
+      } else if (logsData && Array.isArray(logsData.logs)) {
+        logEntries = logsData.logs;
+      }
+
+      if (logEntries.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="state-unavailable">No audit log entries recorded yet.</td></tr>`;
+        if (paginationEl) paginationEl.innerHTML = '';
         return;
       }
 
-      const parsed = lines.map(parseLine);
-      // newest first — timestamps are ISO strings so string comparison sorts correctly
-      const sorted = [...parsed].sort((a, b) => {
-        const ta = a.timestamp || "";
-        const tb = b.timestamp || "";
-        return tb.localeCompare(ta);
+      // Most recent entries first, then paginate.
+      const orderedEntries = [...logEntries].reverse();
+      const { pageItems: pagedEntries, currentPage, totalPages, totalItems } =
+        window.Paginator.slice(orderedEntries, this.currentPage, this.PAGE_SIZE);
+      this.currentPage = currentPage;
+
+      let rowsHtml = '';
+
+      pagedEntries.forEach(entry => {
+        const parsed = this.parseLogEntry(entry);
+        const triggerBadge = this.getTriggerBadge(parsed.trigger);
+
+        rowsHtml += `
+          <tr>
+            <td class="code-font">${this.escapeHtml(parsed.timestamp)}</td>
+            <td><span class="badge badge-blue">${this.escapeHtml(parsed.action)}</span></td>
+            <td class="code-font">${this.escapeHtml(parsed.sku)}</td>
+            <td>${parsed.originalPrice ? `$${parsed.originalPrice}` : '—'}</td>
+            <td><strong>${parsed.newPrice ? `$${parsed.newPrice}` : '—'}</strong></td>
+            <td>${triggerBadge}</td>
+          </tr>
+        `;
       });
 
-      tbody.innerHTML = sorted.map(rowHtml).join("");
+      tableBody.innerHTML = rowsHtml;
+
+      if (paginationEl) {
+        paginationEl.innerHTML = window.Paginator.renderControls({ currentPage, totalPages, totalItems });
+        window.Paginator.attach(paginationEl, this);
+      }
     } catch (err) {
-      console.error("Failed to load audit report", err);
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Couldn't load audit log.</td></tr>`;
-      Dashboard.showError(`Couldn't load audit log: ${err.message}`);
+      tableBody.innerHTML = `<tr><td colspan="6" class="state-unavailable">Audit log unavailable (${err.status || 'Error'}).</td></tr>`;
+      if (paginationEl) paginationEl.innerHTML = '';
     }
+  },
+
+  updateSkuDropdown() {
+    const filterSelect = document.getElementById('audit-sku-filter');
+    if (!filterSelect) return;
+
+    const currentValue = filterSelect.value;
+    const trackedSkus = Array.from(window.TrackedSkus);
+
+    let optionsHtml = `<option value="ALL">All SKUs</option>`;
+    trackedSkus.forEach(sku => {
+      const selected = sku === currentValue ? 'selected' : '';
+      optionsHtml += `<option value="${this.escapeHtml(sku)}" ${selected}>${this.escapeHtml(sku)}</option>`;
+    });
+
+    filterSelect.innerHTML = optionsHtml;
+  },
+
+  parseLogEntry(entry) {
+    if (typeof entry === 'object' && entry !== null) {
+      return {
+        timestamp: entry.timestamp || entry.time || new Date().toISOString(),
+        action: entry.action || 'EXECUTE',
+        sku: entry.sku || '—',
+        originalPrice: entry.originalPrice !== undefined ? entry.originalPrice : null,
+        newPrice: entry.newPrice !== undefined ? entry.newPrice : null,
+        trigger: entry.source || entry.trigger || '—'
+      };
+    }
+
+    const str = String(entry);
+    
+    // Pattern: "[2026-08-10T20:00:00Z] EXECUTE sku=SKU-101 originalPrice=100.00 newPrice=89.99 source=MANUAL"
+    const timestampMatch = str.match(/\[(.*?)\]/);
+    const actionMatch = str.match(/\]\s+([A-Z]+)/);
+    const skuMatch = str.match(/sku=([^\s]+)/);
+    const origMatch = str.match(/originalPrice=([\d.]+)/);
+    const newMatch = str.match(/newPrice=([\d.]+)/);
+    const sourceMatch = str.match(/source=([^\s]+)/);
+
+    return {
+      timestamp: timestampMatch ? timestampMatch[1] : '—',
+      action: actionMatch ? actionMatch[1] : 'EXECUTE',
+      sku: skuMatch ? skuMatch[1] : '—',
+      originalPrice: origMatch ? origMatch[1] : null,
+      newPrice: newMatch ? newMatch[1] : null,
+      trigger: sourceMatch ? sourceMatch[1] : '—'
+    };
+  },
+
+  getTriggerBadge(trigger) {
+    if (!trigger || trigger === '—') {
+      return `<span class="text-muted">—</span>`;
+    }
+    const upper = trigger.toUpperCase();
+    if (upper === 'MANUAL') return `<span class="badge badge-blue">MANUAL</span>`;
+    // RepricingTriggerObserver tags Observer-triggered reprices "AUTO" (not "OBSERVER").
+    if (upper === 'AUTO' || upper === 'OBSERVER') return `<span class="badge badge-green">${this.escapeHtml(upper)}</span>`;
+    if (upper === 'SCHEDULED') return `<span class="badge badge-gray">SCHEDULED</span>`;
+    return `<span class="badge badge-gray">${this.escapeHtml(upper)}</span>`;
+  },
+
+  escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
-
-  function wireToolbar() {
-    document.getElementById("audit-refresh-btn").addEventListener("click", render);
-    document.getElementById("audit-sku-filter").addEventListener("change", render);
-  }
-
-  return { render, wireToolbar, parseLine };
-})();
-
-window.AuditPanel = AuditPanel;
+};
