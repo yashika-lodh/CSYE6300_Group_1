@@ -107,7 +107,7 @@ window.PriceHistoryModule = {
     }
 
     // Colors per SKU
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+    const colors = ['#00a8b5', '#2563eb', '#d97706', '#dc2626', '#9333ea', '#059669'];
     let colorIdx = 0;
 
     let minPrice = Infinity;
@@ -173,7 +173,7 @@ window.PriceHistoryModule = {
           d += ` L ${x} ${prevY} L ${x} ${y}`;
         }
 
-        circles += `<circle cx="${x}" cy="${y}" r="4" fill="${color}" stroke="#0f172a" stroke-width="2" />`;
+        circles += `<circle cx="${x}" cy="${y}" r="4" fill="${color}" stroke="#18181b" stroke-width="2" />`;
       });
 
       svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" />`;
@@ -181,8 +181,8 @@ window.PriceHistoryModule = {
 
       legendHtml += `
         <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem;">
-          <span style="width: 10px; height: 10px; background-color: ${color}; border-radius: 2px;"></span>
-          <span class="code-font" style="color: #f8fafc;">${this.escapeHtml(sku)}</span>
+          <span style="width: 10px; height: 10px; background-color: ${color}; border: 1px solid #18181b;"></span>
+          <span class="code-font">${this.escapeHtml(sku)}</span>
         </div>
       `;
     });
@@ -194,15 +194,15 @@ window.PriceHistoryModule = {
       const p = minPrice + (i / yTicks) * (maxPrice - minPrice);
       const y = scaleY(p);
       yAxisHtml += `
-        <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#334155" stroke-dasharray="3,3" />
-        <text x="${padding.left - 8}" y="${y + 4}" fill="#94a3b8" font-size="11" text-anchor="end">$${p.toFixed(2)}</text>
+        <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#d4d4d8" stroke-dasharray="3,3" />
+        <text x="${padding.left - 8}" y="${y + 4}" fill="#52525b" font-size="11" font-family="Space Mono, monospace" text-anchor="end">$${p.toFixed(2)}</text>
       `;
     }
 
     container.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: 0.75rem;">
         <div style="display: flex; gap: 1rem; flex-wrap: wrap;">${legendHtml}</div>
-        <svg viewBox="0 0 ${width} ${height}" style="width: 100%; height: auto; background-color: #0f172a; border-radius: 8px;">
+        <svg viewBox="0 0 ${width} ${height}" style="width: 100%; height: auto; background-color: #ffffff; border: 1.5px solid #18181b;">
           ${yAxisHtml}
           ${svgPaths}
         </svg>

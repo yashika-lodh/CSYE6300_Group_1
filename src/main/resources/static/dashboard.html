@@ -4,142 +4,141 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Live Dashboard — Dynamic Pricing Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-  <!-- Persistent Top Navigation Bar -->
+  <!-- Top Navigation Bar -->
   <nav class="top-nav">
     <a href="index.html" class="nav-brand">
-      <div class="nav-brand-icon">$</div>
+      <span class="nav-brand-dot"></span>
       <span>Dynamic Pricing Engine</span>
     </a>
     <div class="nav-links">
-      <a href="index.html" class="nav-link">Overview</a>
-      <a href="dashboard.html" class="nav-link active">Live Dashboard</a>
+      <a href="index.html" class="nav-link">OVERVIEW</a>
+      <a href="dashboard.html" class="nav-link active">LIVE DASHBOARD</a>
     </div>
   </nav>
 
   <main class="page-container">
 
-    <!-- Dashboard Page Header & System Status Banner -->
-    <header class="header-banner">
-      <div class="header-title">
-        <h1>Dynamic Pricing Engine</h1>
-        <div class="subtitle">Multi-Channel DTC Retail &mdash; Live Dashboard</div>
+    <!-- Header Banner -->
+    <header class="dashboard-header">
+      <div class="dashboard-title-area">
+        <h1>Live Dashboard</h1>
+        <div class="eyebrow">MULTI-CHANNEL DTC RETAIL &mdash; LIVE DASHBOARD</div>
       </div>
 
-      <div class="header-actions">
-        <!-- Persistent System Status Indicator -->
-        <div class="system-status-widget">
-          <div class="status-item" id="status-db">
-            <span class="status-dot offline"></span> DB: &mdash;
-          </div>
-          <div style="width: 1px; height: 16px; background-color: var(--border-color);"></div>
-          <div class="status-item" id="status-uptime">
-            Uptime: &mdash;
-          </div>
-          <div style="width: 1px; height: 16px; background-color: var(--border-color);"></div>
-          <div class="status-item" id="status-scheduled" style="color: var(--accent-secondary); font-weight: 500;">
-            Scheduled Job: &mdash;
-          </div>
-        </div>
-
-        <!-- Load Demo Data Button -->
-        <button id="btn-load-demo" class="btn btn-primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            <path d="M12 8v8M8 12h8"/>
-          </svg>
-          Load Demo Data
-        </button>
-      </div>
+      <button id="btn-load-demo" class="btn btn-cta">
+        ⚡ LOAD DEMO DATA
+      </button>
     </header>
+
+    <!-- System Status Bar -->
+    <div class="system-status-bar">
+      <div class="status-col">
+        <div class="status-label">DATABASE</div>
+        <div class="status-val" id="status-db"><span class="status-dot offline"></span> &mdash;</div>
+      </div>
+      <div class="status-col">
+        <div class="status-label">UPTIME</div>
+        <div class="status-val" id="status-uptime">&mdash;</div>
+      </div>
+      <div class="status-col">
+        <div class="status-label">SCHEDULED JOB &mdash; LAST RUN</div>
+        <div class="status-val" id="status-scheduled">&mdash;</div>
+      </div>
+      <div class="status-col">
+        <div class="status-label">REPRICE INTERVAL</div>
+        <div class="status-val">1 HOUR</div>
+      </div>
+    </div>
 
     <!-- Grid Layout of Dashboard Panels -->
     <div class="dashboard-grid">
 
-      <!-- PANEL 1: Onboard / Configure SKU -->
+      <!-- PANEL 01: Onboard / Configure SKU -->
       <section class="panel-card col-12">
         <div class="panel-header">
           <div>
-            <div class="panel-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Panel 1: Onboard / Configure SKU
-            </div>
-            <div class="panel-subtitle">Create or update runtime pricing parameters, cost structures, and sales demand history</div>
+            <div class="panel-eyebrow">PANEL 01</div>
+            <h2 class="panel-title">Onboard / Configure SKU</h2>
+            <div class="panel-subtitle">Create or edit a SKU's pricing inputs at runtime.</div>
           </div>
         </div>
 
-        <!-- Row 1: Pricing Inputs -->
+        <!-- Pricing Inputs Row -->
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="input-sku">SKU Code *</label>
-            <input type="text" id="input-sku" class="form-input" placeholder="e.g. SKU-101" value="SKU-101">
+            <label class="form-label" for="input-sku">SKU</label>
+            <input type="text" id="input-sku" class="form-input" placeholder="e.g. TEE-001" value="SKU-101">
           </div>
           <div class="form-group">
-            <label class="form-label" for="input-cost">Cost ($)</label>
+            <label class="form-label" for="input-cost">COST ($)</label>
             <input type="number" step="0.01" id="input-cost" class="form-input" placeholder="50.00">
           </div>
           <div class="form-group">
-            <label class="form-label" for="input-current-price">Current Price ($)</label>
+            <label class="form-label" for="input-current-price">CURRENT PRICE ($)</label>
             <input type="number" step="0.01" id="input-current-price" class="form-input" placeholder="99.99">
           </div>
           <div class="form-group">
-            <label class="form-label" for="input-competitor-price">Competitor Price ($)</label>
+            <label class="form-label" for="input-competitor-price">COMPETITOR PRICE ($)</label>
             <input type="number" step="0.01" id="input-competitor-price" class="form-input" placeholder="105.00">
           </div>
           <div class="form-group">
-            <label class="form-label" for="input-days-inventory">Days in Inventory</label>
+            <label class="form-label" for="input-days-inventory">DAYS IN INVENTORY</label>
             <input type="number" id="input-days-inventory" class="form-input" placeholder="14">
           </div>
           <div class="form-group">
-            <label class="form-label" for="input-min-price">Min Price Guardrail ($)</label>
+            <label class="form-label" for="input-min-price">MIN PRICE / GUARDRAIL ($)</label>
             <input type="number" step="0.01" id="input-min-price" class="form-input" placeholder="75.00">
           </div>
           <div class="form-group">
-            <label class="form-label" for="input-max-price">Max Price Guardrail ($)</label>
+            <label class="form-label" for="input-max-price">MAX PRICE / GUARDRAIL ($)</label>
             <input type="number" step="0.01" id="input-max-price" class="form-input" placeholder="149.99">
           </div>
         </div>
 
-        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
-          <button id="btn-save-inputs" class="btn btn-primary">Save Pricing Inputs</button>
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem;">
+          <button id="btn-save-inputs" class="btn btn-cta">SAVE PRICING INPUTS</button>
         </div>
 
-        <!-- Row 2: Record Demand Signal -->
-        <div style="padding-top: 1rem; border-top: 1px dashed var(--border-color); display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap;">
-          <div class="form-group" style="min-width: 180px;">
-            <label class="form-label" for="demand-sku">Target SKU</label>
-            <input type="text" id="demand-sku" class="form-input" placeholder="SKU-101" value="SKU-101">
+        <!-- Demand Signal Sub-row -->
+        <div class="sub-form-area">
+          <div class="form-group" style="min-width: 180px; flex: 1;">
+            <label class="form-label" for="demand-sku">UNITS SOLD TODAY (DEMAND SIGNAL)</label>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <input type="text" id="demand-sku" class="form-input" style="width: 140px;" placeholder="SKU-101" value="SKU-101">
+              <input type="number" id="demand-units" class="form-input" style="width: 120px;" placeholder="25" value="25">
+              <button id="btn-record-demand" class="btn btn-secondary">RECORD DEMAND</button>
+            </div>
           </div>
-          <div class="form-group" style="min-width: 140px;">
-            <label class="form-label" for="demand-units">Units Sold Today</label>
-            <input type="number" id="demand-units" class="form-input" placeholder="25" value="25">
-          </div>
-          <button id="btn-record-demand" class="btn btn-secondary">Record Demand</button>
         </div>
 
         <!-- Status Message Area -->
         <div id="onboard-status-msg" class="status-msg info" style="display: none;"></div>
       </section>
 
-      <!-- PANEL 2: Inventory -->
+      <!-- PANEL 02: Inventory -->
       <section class="panel-card col-6">
         <div class="panel-header">
           <div>
-            <div class="panel-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-              Panel 2: Inventory Ledger
-            </div>
-            <div class="panel-subtitle">Singleton Stock Ledger &amp; Observer Pattern Trigger</div>
+            <div class="panel-eyebrow">PANEL 02</div>
+            <h2 class="panel-title">Inventory</h2>
+            <div class="panel-subtitle">View and change stock across channels.</div>
           </div>
         </div>
 
-        <!-- Add SKU Input -->
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-          <input type="text" id="input-track-sku" class="form-input" style="flex: 1;" placeholder="Enter SKU to track...">
-          <button id="btn-add-track-sku" class="btn btn-secondary">Add / Track</button>
+        <!-- Track SKU Input -->
+        <div class="inline-add-box">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">TRACK A SKU</label>
+            <input type="text" id="input-track-sku" class="form-input" placeholder="e.g. TEE-001">
+          </div>
+          <button id="btn-add-track-sku" class="btn btn-secondary" style="margin-top: auto;">ADD / TRACK</button>
         </div>
 
         <!-- Inventory Table -->
@@ -148,8 +147,8 @@
             <thead>
               <tr>
                 <th>SKU</th>
-                <th>Stock Level</th>
-                <th>Adjust (-5 / +5)</th>
+                <th>STOCK</th>
+                <th>ADJUST</th>
               </tr>
             </thead>
             <tbody id="inventory-table-body">
@@ -160,21 +159,18 @@
         <div id="inventory-pagination"></div>
       </section>
 
-      <!-- PANEL 3: Pricing -->
+      <!-- PANEL 03: Pricing -->
       <section class="panel-card col-6">
         <div class="panel-header">
           <div>
-            <div class="panel-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              Panel 3: Multi-Channel Pricing
-            </div>
-            <div class="panel-subtitle">Live channel prices &amp; Command Pattern history undo</div>
+            <div class="panel-eyebrow">PANEL 03</div>
+            <h2 class="panel-title">Pricing</h2>
+            <div class="panel-subtitle">View live prices and trigger reprices.</div>
           </div>
 
-          <!-- Global Undo Last Button -->
-          <button id="btn-global-undo" class="btn btn-danger btn-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-            Undo Last
+          <!-- Undo Button -->
+          <button id="btn-global-undo" class="btn btn-secondary btn-sm">
+            ↺ UNDO LAST
           </button>
         </div>
 
@@ -186,9 +182,9 @@
             <thead>
               <tr>
                 <th>SKU</th>
-                <th>Channel</th>
-                <th>Price</th>
-                <th>Action</th>
+                <th>CHANNEL</th>
+                <th>PRICE</th>
+                <th>ACTION</th>
               </tr>
             </thead>
             <tbody id="pricing-table-body">
@@ -199,14 +195,12 @@
         <div id="pricing-pagination"></div>
       </section>
 
-      <!-- PANEL 4: Brand-Positioning Guardrails -->
+      <!-- PANEL 04: Brand-Positioning Guardrails -->
       <section class="panel-card col-12">
         <div class="panel-header">
           <div>
-            <div class="panel-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              Panel 4: Brand-Positioning Guardrails
-            </div>
+            <div class="panel-eyebrow">PANEL 04</div>
+            <h2 class="panel-title">Brand-Positioning Guardrails</h2>
             <div class="panel-subtitle">Client-computed boundary validation (Floor, Ceiling, Within Range)</div>
           </div>
         </div>
@@ -216,11 +210,11 @@
             <thead>
               <tr>
                 <th>SKU</th>
-                <th>Current Price</th>
-                <th>Min Price</th>
-                <th>Max Price</th>
-                <th>Status</th>
-                <th>Action</th>
+                <th>CURRENT PRICE</th>
+                <th>MIN PRICE</th>
+                <th>MAX PRICE</th>
+                <th>STATUS</th>
+                <th>ACTION</th>
               </tr>
             </thead>
             <tbody id="guardrails-table-body">
@@ -231,14 +225,12 @@
         <div id="guardrails-pagination"></div>
       </section>
 
-      <!-- PANEL 5: Price History -->
+      <!-- PANEL 05: Price History -->
       <section class="panel-card col-8">
         <div class="panel-header">
           <div>
-            <div class="panel-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              Panel 5: Price History
-            </div>
+            <div class="panel-eyebrow">PANEL 05</div>
+            <h2 class="panel-title">Price History</h2>
             <div class="panel-subtitle">Step-change audit timeline visualization</div>
           </div>
 
@@ -255,15 +247,13 @@
         <div id="price-history-pagination"></div>
       </section>
 
-      <!-- PANEL 6: Demand Forecast -->
+      <!-- PANEL 06: Demand Forecast -->
       <section class="panel-card col-4">
         <div class="panel-header">
           <div>
-            <div class="panel-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20h20"/><path d="M5 16l4-4 4 4 6-6"/></svg>
-              Panel 6: Demand Forecast
-            </div>
-            <div class="panel-subtitle">Strategy pattern algorithm selection</div>
+            <div class="panel-eyebrow">PANEL 06</div>
+            <h2 class="panel-title">Demand Forecast</h2>
+            <div class="panel-subtitle">What the Strategy pattern is deciding &mdash; read-only.</div>
           </div>
         </div>
 
@@ -272,8 +262,8 @@
             <thead>
               <tr>
                 <th>SKU</th>
-                <th>Trend</th>
-                <th>Selected Strategy</th>
+                <th>TREND</th>
+                <th>SELECTED STRATEGY</th>
               </tr>
             </thead>
             <tbody id="forecast-table-body">
@@ -284,14 +274,12 @@
         <div id="forecast-pagination"></div>
       </section>
 
-      <!-- PANEL 7: Audit Log -->
+      <!-- PANEL 07: Audit Log -->
       <section class="panel-card col-12">
         <div class="panel-header">
           <div>
-            <div class="panel-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              Panel 7: Audit Log
-            </div>
+            <div class="panel-eyebrow">PANEL 07</div>
+            <h2 class="panel-title">Audit Log</h2>
             <div class="panel-subtitle">Compliance logging trail via Decorator pattern</div>
           </div>
 
@@ -307,12 +295,12 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Timestamp</th>
-                <th>Action</th>
+                <th>TIMESTAMP</th>
+                <th>ACTION</th>
                 <th>SKU</th>
-                <th>Original Price</th>
-                <th>New Price</th>
-                <th>Trigger</th>
+                <th>ORIGINAL PRICE</th>
+                <th>NEW PRICE</th>
+                <th>TRIGGER</th>
               </tr>
             </thead>
             <tbody id="audit-table-body">
@@ -331,7 +319,6 @@
     <div id="footer-last-updated" class="timestamp">Last updated: &mdash;</div>
   </footer>
 
-  <!-- Script Imports: Non-negotiable Vanilla JS Static Architecture -->
   <script src="js/api.js"></script>
   <script src="js/pagination.js"></script>
   <script src="js/system-status.js"></script>
