@@ -1,129 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dynamic Pricing Engine — Multi-Channel DTC Retail</title>
-  <link rel="stylesheet" href="css/dashboard.css" />
-  <link rel="stylesheet" href="css/landing.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overview — Dynamic Pricing Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
+  <!-- Top Navigation Bar -->
   <nav class="top-nav">
-    <span class="top-nav-brand">Dynamic Pricing Engine</span>
-    <div class="top-nav-links">
-      <a href="index.html" class="active">Overview</a>
-      <a href="dashboard.html">Live Dashboard</a>
+    <a href="index.html" class="nav-brand">
+      <span class="nav-brand-dot"></span>
+      <span>Dynamic Pricing Engine</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link active">OVERVIEW</a>
+      <a href="dashboard.html" class="nav-link">LIVE DASHBOARD</a>
     </div>
   </nav>
 
-  <header class="hero">
-    <h1>Dynamic Pricing Engine</h1>
-    <p class="hero-subtitle">Multi-Channel DTC Retail — CSYE 6300, Group 1</p>
-    <p class="hero-blurb">
-      DTC brands selling across Shopify, their own website, and social commerce
-      price manually and inconsistently, with no feedback loop back to demand.
-      This engine forecasts demand in real time, auto-selects a pricing
-      strategy per market conditions, syncs prices across every channel, and
-      keeps a full audit trail of every price change — built as a live
-      demonstration of nine classic software design patterns working together.
-    </p>
-    <a class="hero-cta" href="dashboard.html">Open the Live Dashboard →</a>
-  </header>
+  <main class="page-container">
 
-  <section class="section">
-    <h2>Architecture</h2>
-    <p class="section-lede">
-      One pipeline, one feedback loop: demand history feeds a forecaster,
-      the forecaster's trend picks a pricing strategy, the resulting price
-      change is executed and logged, and every stock change loops back in
-      automatically through an Observer.
-    </p>
-    <div class="diagram-frame">
-      <img src="media/uml_diagram.png" alt="UML diagram of the pricing engine architecture" />
-    </div>
-  </section>
+    <!-- Hero Section -->
+    <section class="hero-layout">
+      <div class="hero-content">
+        <div class="eyebrow">CSYE 6300 &middot; GROUP 1</div>
+        <h1 class="hero-title">Dynamic Pricing Engine</h1>
+        <div class="hero-subtitle">Multi-Channel DTC Retail &mdash; CSYE 6300, Group 1</div>
+        <p class="hero-desc">
+          Direct-to-consumer brands set prices by hand across Shopify, their own storefront, and social commerce &mdash; with no demand feedback loop tying it together. This project is a live demonstration of nine classic design patterns cooperating to reprice inventory automatically as demand shifts.
+        </p>
+        <a href="dashboard.html" class="btn btn-cta">
+          OPEN LIVE DASHBOARD &rarr;
+        </a>
+      </div>
 
-  <section class="section">
-    <h2>Nine Design Patterns</h2>
-    <p class="section-lede">
-      Every core class names the pattern it implements directly in its
-      Javadoc — this system is a working example of each, not just a
-      textbook description.
-    </p>
-    <div class="pattern-grid">
+      <div class="hero-stats">
+        <div class="stat-block">
+          <div class="stat-number">9</div>
+          <div class="stat-label">DESIGN PATTERNS</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-number">3</div>
+          <div class="stat-label">SALES CHANNELS</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-number">1</div>
+          <div class="stat-label">FEEDBACK LOOP</div>
+        </div>
+      </div>
+    </section>
 
-      <article class="pattern-card">
-        <h3>Singleton</h3>
-        <p class="pattern-class"><code>Inventory</code></p>
-        <p>Exactly one thread-safe stock ledger shared by every sales channel.</p>
-      </article>
+    <div class="section-divider"></div>
 
-      <article class="pattern-card">
-        <h3>Observer</h3>
-        <p class="pattern-class"><code>InventoryObserver</code>, <code>RepricingTriggerObserver</code>, <code>InventoryPersistenceObserver</code></p>
-        <p>Two independent subscribers react to a stock change — one triggers a reprice, one writes through to the DB.</p>
-      </article>
+    <!-- Architecture Section -->
+    <section class="arch-section">
+      <div class="eyebrow">01 &mdash; ARCHITECTURE</div>
+      <h2>A closed-loop repricing pipeline</h2>
+      <p>
+        Demand history feeds a forecaster that classifies the trend. A strategy is selected at runtime to calculate an updated price. A decorator wraps the price update command for compliance audit logging, while the factory distributes new prices to multi-channel endpoints. An observer feedback loop keeps inventory synchronized across all channels.
+      </p>
+      <div class="arch-diagram-box">
+        <picture>
+          <source srcset="media/uml_diagram.svg" type="image/svg+xml">
+          <img src="media/uml_diagram.png" alt="UML Architecture Diagram for Dynamic Pricing Engine" referrerpolicy="no-referrer">
+        </picture>
+      </div>
+    </section>
 
-      <article class="pattern-card">
-        <h3>Strategy</h3>
-        <p class="pattern-class"><code>PricingStrategy</code>, <code>PricingStrategySelector</code></p>
-        <p>Interchangeable pricing algorithms chosen at runtime by demand trend: cost-plus, competitor-aware, or inventory-aging.</p>
-      </article>
+    <div class="section-divider"></div>
 
-      <article class="pattern-card">
-        <h3>Factory Method</h3>
-        <p class="pattern-class"><code>SalesChannelFactory</code></p>
-        <p>Centralizes creation of every channel type (Shopify, own website, social commerce) behind one call.</p>
-      </article>
+    <!-- Nine Design Patterns Grid -->
+    <section class="patterns-section">
+      <div class="eyebrow">02 &mdash; DESIGN PATTERNS</div>
+      <h2>Nine Core Design Patterns</h2>
 
-      <article class="pattern-card">
-        <h3>Command</h3>
-        <p class="pattern-class"><code>PricingCommand</code>, <code>UpdatePriceCommand</code>, <code>PricingCommandInvoker</code></p>
-        <p>Encapsulates a price change so it can be queued, executed, and undone uniformly across channels.</p>
-      </article>
+      <div class="patterns-grid">
+        <!-- 1. Singleton -->
+        <div class="pattern-card">
+          <div class="pattern-number">1. Singleton</div>
+          <code class="class-name">Inventory</code>
+          <p class="desc">One thread-safe stock ledger shared by every channel.</p>
+        </div>
 
-      <article class="pattern-card">
-        <h3>Decorator</h3>
-        <p class="pattern-class"><code>AuditLoggingCommandDecorator</code></p>
-        <p>Wraps any command with compliance logging without touching the command's own execute/undo logic.</p>
-      </article>
+        <!-- 2. Observer -->
+        <div class="pattern-card">
+          <div class="pattern-number">2. Observer</div>
+          <code class="class-name">InventoryObserver, RepricingTriggerObserver, InventoryPersistenceObserver</code>
+          <p class="desc">Independent subscribers react to a stock change: one triggers a reprice, one writes through to the DB.</p>
+        </div>
 
-      <article class="pattern-card">
-        <h3>Adapter</h3>
-        <p class="pattern-class"><code>DemandSignalAdapter</code></p>
-        <p>Translates the external raw demand feed shape into the engine's own domain model.</p>
-      </article>
+        <!-- 3. Strategy -->
+        <div class="pattern-card">
+          <div class="pattern-number">3. Strategy</div>
+          <code class="class-name">PricingStrategy, PricingStrategySelector</code>
+          <p class="desc">Interchangeable pricing algorithms chosen at runtime by demand trend.</p>
+        </div>
 
-      <article class="pattern-card">
-        <h3>Template Method</h3>
-        <p class="pattern-class"><code>RepricingWorkflow</code>, <code>StandardRepricingWorkflow</code>, <code>ScheduledRepricingWorkflow</code></p>
-        <p>One fixed fetch → validate → execute → log skeleton, run either on-demand or on a timer.</p>
-      </article>
+        <!-- 4. Factory Method -->
+        <div class="pattern-card">
+          <div class="pattern-number">4. Factory Method</div>
+          <code class="class-name">SalesChannelFactory</code>
+          <p class="desc">Centralizes creation of every channel type behind one call.</p>
+        </div>
 
-      <article class="pattern-card">
-        <h3>Repository</h3>
-        <p class="pattern-class"><code>InventoryRepository</code>, <code>DemandSignalRepository</code></p>
-        <p>Decouples domain logic from storage — JPA/H2 for stock, CSV for demand history.</p>
-      </article>
+        <!-- 5. Command -->
+        <div class="pattern-card">
+          <div class="pattern-number">5. Command</div>
+          <code class="class-name">PricingCommand, UpdatePriceCommand, PricingCommandInvoker</code>
+          <p class="desc">Encapsulates a price change so it can be queued, executed, and undone.</p>
+        </div>
 
-    </div>
-  </section>
+        <!-- 6. Decorator -->
+        <div class="pattern-card">
+          <div class="pattern-number">6. Decorator</div>
+          <code class="class-name">AuditLoggingCommandDecorator</code>
+          <p class="desc">Wraps any command with compliance logging without touching its own logic.</p>
+        </div>
 
-  <section class="section">
-    <h2>Tech Stack</h2>
-    <ul class="tech-list">
-      <li>Java 21</li>
-      <li>Spring Boot 3.3 (REST API)</li>
-      <li>Hibernate/JPA + H2 (persistence)</li>
-      <li>JUnit 5 + Spring Boot Test</li>
-      <li>SLF4J / Logback</li>
-      <li>Shopify Admin GraphQL API</li>
-    </ul>
-  </section>
+        <!-- 7. Adapter -->
+        <div class="pattern-card">
+          <div class="pattern-number">7. Adapter</div>
+          <code class="class-name">DemandSignalAdapter</code>
+          <p class="desc">Translates the external raw demand feed shape into the engine's domain model.</p>
+        </div>
 
-  <footer class="app-footer">
-    <span>Dynamic Pricing Engine — CSYE 6300, Group 1</span>
+        <!-- 8. Template Method -->
+        <div class="pattern-card">
+          <div class="pattern-number">8. Template Method</div>
+          <code class="class-name">RepricingWorkflow, StandardRepricingWorkflow, ScheduledRepricingWorkflow</code>
+          <p class="desc">One fixed fetch&rarr;validate&rarr;execute&rarr;log skeleton, run on-demand or on a timer.</p>
+        </div>
+
+        <!-- 9. Repository -->
+        <div class="pattern-card">
+          <div class="pattern-number">9. Repository</div>
+          <code class="class-name">InventoryRepository, DemandSignalRepository</code>
+          <p class="desc">Decouples domain logic from storage (JPA/H2 for stock, CSV for demand).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tech Stack Box -->
+    <section class="tech-stack-box">
+      <div class="eyebrow">03 &mdash; STACK</div>
+      <h2>Technology Stack &amp; Infrastructure</h2>
+      <div class="tech-stack-tags">
+        <span class="tech-tag">Java 21</span>
+        <span class="tech-tag">Spring Boot 3.3</span>
+        <span class="tech-tag">Hibernate / JPA</span>
+        <span class="tech-tag">H2 Database</span>
+        <span class="tech-tag">JUnit 5</span>
+        <span class="tech-tag">Spring Boot Test</span>
+        <span class="tech-tag">SLF4J / Logback</span>
+        <span class="tech-tag">Shopify Admin GraphQL API</span>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div>Dynamic Pricing Engine REST API &mdash; CSYE 6300, Group 1</div>
+    <a href="dashboard.html" class="footer-link">GO TO LIVE DASHBOARD &rarr;</a>
   </footer>
 
 </body>

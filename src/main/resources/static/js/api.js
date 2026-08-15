@@ -1,160 +1,127 @@
 /**
- * api.js — the ONLY file in this dashboard that knows the backend's actual
- * endpoint paths and payload shapes. Every other panel file calls a function
- * here instead of building a URL itself, so if a controller's route or
- * response shape changes, this is the single place to update.
- *
- * Endpoint contract — verified directly against the real controller source
- * (InventoryController.java, PricingController.java, AuditController.java):
- *
- *   GET  /api/inventory                 -> { [sku]: quantity }  (full snapshot)
- *   GET  /api/inventory/{sku}           -> { sku, quantity }
- *   PUT  /api/inventory/{sku}?quantity=N          -> { sku, quantity }   (absolute set)
- *   POST /api/inventory/{sku}/adjust?delta=N      -> { sku, quantity }   (relative delta)
- *
- *   GET  /api/pricing/{sku}             -> { sku, prices: { [channel]: price } }
- *   POST /api/pricing/{sku}/reprice     -> { sku, prices: { [channel]: price } }
- *   POST /api/pricing/{sku}/undo        -> { sku, prices: { [channel]: price } }
- *                                           (409 with { sku, message } if there's nothing to undo)
- *   GET  /api/pricing/{sku}/forecast    -> { sku, trend, strategy }  (read-only, no reprice triggered)
- *   GET  /api/pricing/scheduled-status  -> { active: bool, skus: string[], lastRunAt: ISO|null, nextRunAt: ISO|null }
- *
- *   GET  /api/system/status             -> { persistenceEnabled: bool, serverStartedAt: ISO timestamp }
- *
- *   GET  /api/audit                     -> string[]  (raw AuditLoggingCommandDecorator lines,
- *                                           e.g. "[2026-08-09T22:10:21.588Z] EXECUTE sku=SKU-1001
- *                                           originalPrice=24.99 newPrice=21.38")
- *   GET  /api/audit/{sku}               -> string[]  (same format, filtered to one SKU)
- *
- *   PUT  /api/pricing-inputs/{sku}?cost=&currentPrice=&competitorPrice=&daysInInventory=&minPrice=&maxPrice=&name=
- *                                        -> { sku, name, cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice }
- *                                           (all params optional; only supplied ones change; also seeds a
- *                                           flat baseline demand history so a brand-new SKU is immediately priceable.
- *                                           name is purely cosmetic, never used in pricing math; null if never set.)
- *   GET  /api/pricing-inputs/{sku}      -> same shape, current effective values
- *
- *   POST /api/demand/{sku}?units=&date= -> { sku, trend, points: [{date, units}, ...] }  (date optional, defaults to today)
- *   GET  /api/demand/{sku}              -> same shape, full recorded history
- *
- *   POST /api/demo/seed                 -> { seeded: [sku, ...] }  (re-seeds the mock SKU-DEMO-1..5 dataset)
+ * API Client Module — Single point of truth for constructing relative endpoint paths.
+ * Served from the same origin as Spring Boot REST API.
  */
 
-const Api = (() => {
-  const BASE = ""; // same-origin: dashboard is served by the same Spring Boot app
-
-  async function request(path, options = {}) {
-    const response = await fetch(BASE + path, options);
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`${options.method || "GET"} ${path} failed (${response.status}): ${text}`);
-    }
-
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      return response.json();
-    }
-    return response.text();
-  }
-
-  /** Full stock snapshot: { sku: quantity, ... } across every tracked SKU. */
-  function getAllInventory() {
-    return request(`/api/inventory`);
-  }
-
-  function getInventory(sku) {
-    return request(`/api/inventory/${encodeURIComponent(sku)}`);
-  }
-
-  /** Relative stock change (positive = restock, negative = sale). delta is a query param, not a body. */
-  function adjustStock(sku, delta) {
-    const qs = new URLSearchParams({ delta }).toString();
-    return request(`/api/inventory/${encodeURIComponent(sku)}/adjust?${qs}`, { method: "POST" });
-  }
-
-  /** Absolute stock set. quantity is a query param, not a body. */
-  function setStock(sku, quantity) {
-    const qs = new URLSearchParams({ quantity }).toString();
-    return request(`/api/inventory/${encodeURIComponent(sku)}?${qs}`, { method: "PUT" });
-  }
-
-  function getPrices(sku) {
-    return request(`/api/pricing/${encodeURIComponent(sku)}`);
-  }
-
-  function reprice(sku) {
-    return request(`/api/pricing/${encodeURIComponent(sku)}/reprice`, { method: "POST" });
-  }
-
-  /** Read-only trend + selected-strategy preview: { sku, trend, strategy }. */
-  function getForecast(sku) {
-    return request(`/api/pricing/${encodeURIComponent(sku)}/forecast`);
-  }
-
-  /** Undoes the SKU's most recent reprice (Command pattern). Rejects with a 409 message if there's nothing to undo. */
-  function undo(sku) {
-    return request(`/api/pricing/${encodeURIComponent(sku)}/undo`, { method: "POST" });
-  }
-
-  /** { active, skus, lastRunAt, nextRunAt } for ScheduledRepricingWorkflow's periodic sweep. */
-  function getScheduledStatus() {
-    return request(`/api/pricing/scheduled-status`);
-  }
-
-  /** { persistenceEnabled, serverStartedAt } -- static for the life of the server, fetched once on load. */
-  function getSystemStatus() {
-    return request(`/api/system/status`);
-  }
-
-  /** Full audit trail as raw log-line strings. */
-  function getAuditReport() {
-    return request(`/api/audit`);
-  }
-
-  /** Audit trail filtered to a single SKU, as raw log-line strings. */
-  function getAuditReportForSku(sku) {
-    return request(`/api/audit/${encodeURIComponent(sku)}`);
-  }
-
+window.API = {
   /**
-   * Creates or updates a SKU's pricing inputs. `fields` may include any of
-   * cost, currentPrice, competitorPrice, daysInInventory, minPrice, maxPrice
-   * -- omitted/undefined ones are left unchanged on the backend.
+   * Helper function to execute fetch calls and handle errors
    */
-  function upsertPricingInputs(sku, fields) {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined && v !== null && v !== ""))
-    ).toString();
-    return request(`/api/pricing-inputs/${encodeURIComponent(sku)}?${qs}`, { method: "PUT" });
-  }
+  async request(path, options = {}) {
+    try {
+      const response = await fetch(path, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(options.headers || {})
+        },
+        ...options
+      });
 
-  function getPricingInputs(sku) {
-    return request(`/api/pricing-inputs/${encodeURIComponent(sku)}`);
-  }
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        const errorObj = {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorText || `HTTP ${response.status} ${response.statusText}`
+        };
+        throw errorObj;
+      }
 
-  /** Records one day of demand for a SKU. `date` is optional (YYYY-MM-DD); defaults to today. */
-  function recordDemand(sku, units, date) {
-    const params = { units };
-    if (date) params.date = date;
-    const qs = new URLSearchParams(params).toString();
-    return request(`/api/demand/${encodeURIComponent(sku)}?${qs}`, { method: "POST" });
-  }
+      // Return parsed JSON if response has content
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      }
+      return await response.text();
+    } catch (err) {
+      console.warn(`[API] Request failed for path "${path}":`, err);
+      throw err;
+    }
+  },
 
-  function getDemandHistory(sku) {
-    return request(`/api/demand/${encodeURIComponent(sku)}`);
-  }
+  // GET /api/system/status
+  getSystemStatus() {
+    return this.request('/api/system/status');
+  },
 
-  /** Re-seeds the mock SKU-DEMO-1..5 dataset. Returns { seeded: [sku, ...] }. Blocks a few seconds server-side (real staggered reprices), not a bug. */
-  function seedDemoData() {
-    return request(`/api/demo/seed`, { method: "POST" });
-  }
+  // GET /api/pricing/scheduled-status
+  getScheduledStatus() {
+    return this.request('/api/pricing/scheduled-status');
+  },
 
-  return {
-    getAllInventory, getInventory, adjustStock, setStock,
-    getPrices, reprice, undo, getForecast, getScheduledStatus,
-    getAuditReport, getAuditReportForSku,
-    upsertPricingInputs, getPricingInputs,
-    recordDemand, getDemandHistory,
-    seedDemoData, getSystemStatus,
-  };
-})();
+  // POST /api/demo/seed
+  seedDemoData() {
+    return this.request('/api/demo/seed', { method: 'POST' });
+  },
+
+  // GET /api/inventory
+  getInventory() {
+    return this.request('/api/inventory');
+  },
+
+  // POST /api/inventory/{sku}/adjust?delta=±5
+  adjustInventory(sku, delta) {
+    const encodedSku = encodeURIComponent(sku);
+    return this.request(`/api/inventory/${encodedSku}/adjust?delta=${delta}`, { method: 'POST' });
+  },
+
+  // GET /api/pricing/{sku}
+  getPricing(sku) {
+    const encodedSku = encodeURIComponent(sku);
+    return this.request(`/api/pricing/${encodedSku}`);
+  },
+
+  // POST /api/pricing/{sku}/reprice
+  repriceSku(sku) {
+    const encodedSku = encodeURIComponent(sku);
+    return this.request(`/api/pricing/${encodedSku}/reprice`, { method: 'POST' });
+  },
+
+  // POST /api/pricing/undo
+  undoLastCommand() {
+    return this.request('/api/pricing/undo', { method: 'POST' });
+  },
+
+  // GET /api/pricing-inputs/{sku}
+  getPricingInputs(sku) {
+    const encodedSku = encodeURIComponent(sku);
+    return this.request(`/api/pricing-inputs/${encodedSku}`);
+  },
+
+  // PUT /api/pricing-inputs/{sku}?field=val...
+  savePricingInputs(sku, inputParams = {}) {
+    const encodedSku = encodeURIComponent(sku);
+    const searchParams = new URLSearchParams();
+
+    Object.entries(inputParams).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        searchParams.append(key, val);
+      }
+    });
+
+    const queryString = searchParams.toString();
+    const url = `/api/pricing-inputs/${encodedSku}${queryString ? '?' + queryString : ''}`;
+    return this.request(url, { method: 'PUT' });
+  },
+
+  // POST /api/demand/{sku}?units=N
+  recordDemand(sku, units) {
+    const encodedSku = encodeURIComponent(sku);
+    return this.request(`/api/demand/${encodedSku}?units=${encodeURIComponent(units)}`, { method: 'POST' });
+  },
+
+  // GET /api/pricing/{sku}/forecast
+  getForecast(sku) {
+    const encodedSku = encodeURIComponent(sku);
+    return this.request(`/api/pricing/${encodedSku}/forecast`);
+  },
+
+  // GET /api/audit OR GET /api/audit/{sku}
+  getAuditLogs(sku = null) {
+    if (sku && sku !== 'ALL') {
+      return this.request(`/api/audit/${encodeURIComponent(sku)}`);
+    }
+    return this.request('/api/audit');
+  }
+};

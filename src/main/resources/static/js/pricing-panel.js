@@ -1,117 +1,173 @@
 /**
- * pricing-panel.js — renders the Pricing panel: current price per SKU per
- * channel, and a "Reprice now" button per SKU that calls the repricing
- * endpoint and immediately shows the resulting price. Reuses
- * InventoryPanel's tracked-SKU list so both panels always show the same set
- * of SKUs.
- *
- * Note: PricingController does not expose the demand trend (RISING/FALLING/
- * STABLE) over HTTP, so this panel shows price only, not trend.
+ * Panel 3 — Pricing Panel & Global Undo Command History
  */
 
-const PricingPanel = (() => {
+window.PricingPanelModule = {
+  currentPage: 1,
+  PAGE_SIZE: 5,
 
-  async function renderRowsForSku(sku) {
-    try {
-      const data = await Api.getPrices(sku);
-      const prices = data.prices || {};
-      const channels = Object.keys(prices);
-
-      if (channels.length === 0) {
-        return [rowHtml(sku, "—", null, true)];
-      }
-
-      return channels.map((channel, idx) =>
-        rowHtml(sku, channel, prices[channel], idx === 0, false));
-    } catch (err) {
-      console.error("Failed to load pricing for", sku, err);
-      return [rowHtml(sku, "—", null, true, true)];
+  init() {
+    const undoBtn = document.getElementById('btn-global-undo');
+    if (undoBtn) {
+      undoBtn.addEventListener('click', () => this.handleUndoLastCommand());
     }
-  }
+  },
 
-  function rowHtml(sku, channel, price, showRepriceButton, failed = false) {
-    const priceDisplay = failed ? "—" : (price != null ? `$${Number(price).toFixed(2)}` : "—");
-    const actions = showRepriceButton
-      ? `<button data-action="reprice" data-sku="${sku}">Reprice now</button>
-         <button class="secondary" data-action="undo" data-sku="${sku}">Undo last</button>`
-      : "";
+  async refresh() {
+    const tableBody = document.getElementById('pricing-table-body');
+    const paginationEl = document.getElementById('pricing-pagination');
+    if (!tableBody) return;
 
-    return `
-      <tr data-sku="${sku}" data-channel="${channel}">
-        <td>${sku}</td>
-        <td>${channel}</td>
-        <td class="price-cell">${priceDisplay}</td>
-        <td>${actions}</td>
-      </tr>`;
-  }
-
-  async function render() {
-    const tbody = document.getElementById("pricing-rows");
-    const skus = window.InventoryPanel ? window.InventoryPanel.getTrackedSkus() : [];
-
-    if (skus.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No SKUs tracked yet — add one in the Inventory panel.</td></tr>`;
+    const trackedSkus = Array.from(window.TrackedSkus);
+    if (trackedSkus.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="4" class="state-unavailable">No tracked SKUs available.</td></tr>`;
+      if (paginationEl) paginationEl.innerHTML = '';
       return;
     }
 
-    const rowGroups = await Promise.all(skus.map(renderRowsForSku));
-    tbody.innerHTML = rowGroups.flat().join("");
+    // Paginate by SKU (not by raw row) since each SKU spans multiple channel rows via rowspan.
+    const { pageItems: pagedSkus, currentPage, totalPages, totalItems } =
+      window.Paginator.slice(trackedSkus, this.currentPage, this.PAGE_SIZE);
+    this.currentPage = currentPage;
 
-    tbody.querySelectorAll("button[data-action='reprice']").forEach((btn) => {
-      btn.addEventListener("click", onRepriceClick);
-    });
-    tbody.querySelectorAll("button[data-action='undo']").forEach((btn) => {
-      btn.addEventListener("click", onUndoClick);
-    });
-  }
+    let allRowsHtml = '';
 
-  async function onRepriceClick(event) {
-    const btn = event.currentTarget;
-    const sku = btn.dataset.sku;
+    // Fetch pricing for every SKU on this page
+    for (const sku of pagedSkus) {
+      try {
+        const pricingData = await window.API.getPricing(sku);
+        let channelList = [];
 
-    btn.disabled = true;
-    btn.textContent = "Repricing…";
-    Dashboard.beginManualAction();
-    try {
-      await Api.reprice(sku);
-      await render();
-      if (window.AuditPanel) {
-        await window.AuditPanel.render();
+        if (Array.isArray(pricingData)) {
+          channelList = pricingData;
+        } else if (pricingData && Array.isArray(pricingData.channels)) {
+          channelList = pricingData.channels.map(c => ({
+            channel: c.channel || c.name,
+            price: c.price
+          }));
+        } else if (pricingData && pricingData.prices && typeof pricingData.prices === 'object') {
+          // Real shape from PricingController: { sku, prices: { "Shopify": 24.30, ... } }
+          channelList = Object.entries(pricingData.prices).map(([channel, price]) => ({ channel, price }));
+        } else if (pricingData && typeof pricingData === 'object') {
+          // Could be {"Shopify Direct": 89.99, "Own Web Store": 89.99}
+          channelList = Object.entries(pricingData).map(([channel, price]) => ({ channel, price }));
+        }
+
+        if (channelList.length === 0) {
+          allRowsHtml += `
+            <tr>
+              <td class="code-font">${this.escapeHtml(sku)}</td>
+              <td colspan="2" class="state-unavailable">No active channel prices</td>
+              <td>
+                <button class="btn btn-primary btn-sm" onclick="window.PricingPanelModule.repriceSku('${this.escapeHtml(sku)}')">Reprice Now</button>
+              </td>
+            </tr>
+          `;
+        } else {
+          const rowCount = channelList.length;
+          channelList.forEach((ch, idx) => {
+            const formattedPrice = typeof ch.price === 'number' ? `$${ch.price.toFixed(2)}` : (ch.price || '—');
+            allRowsHtml += `
+              <tr>
+                ${idx === 0 ? `<td class="code-font" rowspan="${rowCount}">${this.escapeHtml(sku)}</td>` : ''}
+                <td>${this.escapeHtml(ch.channel || 'Direct Channel')}</td>
+                <td><strong>${formattedPrice}</strong></td>
+                ${idx === 0 ? `
+                  <td rowspan="${rowCount}">
+                    <button class="btn btn-primary btn-sm" onclick="window.PricingPanelModule.repriceSku('${this.escapeHtml(sku)}')">Reprice Now</button>
+                  </td>
+                ` : ''}
+              </tr>
+            `;
+          });
+        }
+      } catch (err) {
+        allRowsHtml += `
+          <tr>
+            <td class="code-font">${this.escapeHtml(sku)}</td>
+            <td colspan="2" class="state-unavailable">Pricing data unavailable (${err.status || 'Error'})</td>
+            <td>
+              <button class="btn btn-primary btn-sm" onclick="window.PricingPanelModule.repriceSku('${this.escapeHtml(sku)}')">Reprice Now</button>
+            </td>
+          </tr>
+        `;
       }
-    } catch (err) {
-      console.error("Failed to reprice", sku, err);
-      Dashboard.showError(`Couldn't reprice ${sku}: ${err.message}`);
-      btn.disabled = false;
-      btn.textContent = "Reprice now";
-    } finally {
-      Dashboard.endManualAction();
     }
-  }
 
-  async function onUndoClick(event) {
-    const btn = event.currentTarget;
-    const sku = btn.dataset.sku;
+    tableBody.innerHTML = allRowsHtml;
 
-    btn.disabled = true;
-    btn.textContent = "Undoing…";
-    Dashboard.beginManualAction();
+    if (paginationEl) {
+      paginationEl.innerHTML = window.Paginator.renderControls({ currentPage, totalPages, totalItems });
+      window.Paginator.attach(paginationEl, this);
+    }
+  },
+
+  async repriceSku(sku) {
+    const statusMsg = document.getElementById('pricing-status-msg');
     try {
-      await Api.undo(sku);
-      await render();
-      if (window.AuditPanel) {
-        await window.AuditPanel.render();
+      if (statusMsg) {
+        statusMsg.className = 'status-msg info';
+        statusMsg.style.display = 'flex';
+        statusMsg.innerHTML = `<span>Triggering RepricingWorkflow for ${sku}...</span>`;
       }
+      const result = await window.API.repriceSku(sku);
+      if (statusMsg) {
+        statusMsg.className = 'status-msg success';
+        statusMsg.innerHTML = `<span>Repriced ${sku} successfully!</span>`;
+      }
+      if (window.refreshAllPanels) window.refreshAllPanels();
     } catch (err) {
-      console.error("Failed to undo", sku, err);
-      Dashboard.showError(`Couldn't undo ${sku}: ${err.message}`);
-      btn.disabled = false;
-      btn.textContent = "Undo last";
-    } finally {
-      Dashboard.endManualAction();
+      if (statusMsg) {
+        statusMsg.className = 'status-msg error';
+        statusMsg.innerHTML = `<span>Failed to reprice ${sku}: ${err.message || 'Error'}</span>`;
+      }
     }
+  },
+
+  async handleUndoLastCommand() {
+    const undoBtn = document.getElementById('btn-global-undo');
+    const statusMsg = document.getElementById('pricing-status-msg');
+
+    try {
+      const res = await window.API.undoLastCommand();
+      if (res && res.undone) {
+        const skuInfo = res.sku ? `for ${res.sku}` : '';
+        const detail = `Undone last pricing command ${skuInfo}: $${res.originalPrice || ''} → $${res.newPrice || ''}`;
+        if (statusMsg) {
+          statusMsg.className = 'status-msg success';
+          statusMsg.style.display = 'flex';
+          statusMsg.innerHTML = `<span>${detail}</span>`;
+        }
+      } else {
+        if (statusMsg) {
+          statusMsg.className = 'status-msg info';
+          statusMsg.style.display = 'flex';
+          statusMsg.innerHTML = `<span>No pricing commands available in undo history stack.</span>`;
+        }
+      }
+      if (window.refreshAllPanels) window.refreshAllPanels();
+    } catch (err) {
+      if (err && err.status === 404) {
+        if (undoBtn) {
+          undoBtn.disabled = true;
+          undoBtn.setAttribute('data-tooltip', 'Not available yet.');
+        }
+        if (statusMsg) {
+          statusMsg.className = 'status-msg error';
+          statusMsg.style.display = 'flex';
+          statusMsg.innerHTML = `<span>Undo Endpoint Not Available (404).</span>`;
+        }
+      } else {
+        if (statusMsg) {
+          statusMsg.className = 'status-msg error';
+          statusMsg.style.display = 'flex';
+          statusMsg.innerHTML = `<span>Undo Failed: ${err.message || 'Error'}</span>`;
+        }
+      }
+    }
+  },
+
+  escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
-
-  return { render };
-})();
-
-window.PricingPanel = PricingPanel;
+};

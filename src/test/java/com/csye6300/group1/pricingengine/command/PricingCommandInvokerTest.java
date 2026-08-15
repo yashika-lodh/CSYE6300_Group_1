@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -67,5 +68,27 @@ class PricingCommandInvokerTest {
     void undoOnEmptyHistoryReturnsFalse() {
         PricingCommandInvoker invoker = new PricingCommandInvoker();
         assertFalse(invoker.undo());
+    }
+
+    @Test
+    void undoAndDescribeReportsWhatWasUndone() {
+        InMemoryPriceReceiver receiver = new InMemoryPriceReceiver();
+        receiver.setPrice("SKU-1", 10.0);
+        PricingCommandInvoker invoker = new PricingCommandInvoker();
+
+        invoker.executeCommand(new UpdatePriceCommand(receiver, "SKU-1", 15.0));
+        Optional<PricingCommand> undone = invoker.undoAndDescribe();
+
+        assertTrue(undone.isPresent());
+        assertEquals("SKU-1", undone.get().getSku());
+        assertEquals(10.0, undone.get().getOriginalPrice());
+        assertEquals(15.0, undone.get().getNewPrice());
+        assertEquals(10.0, receiver.getPrice("SKU-1"));
+    }
+
+    @Test
+    void undoAndDescribeOnEmptyHistoryReturnsEmpty() {
+        PricingCommandInvoker invoker = new PricingCommandInvoker();
+        assertFalse(invoker.undoAndDescribe().isPresent());
     }
 }

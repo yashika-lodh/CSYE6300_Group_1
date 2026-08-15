@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Command pattern "invoker": runs PricingCommands and keeps a history stack
@@ -39,6 +40,22 @@ public class PricingCommandInvoker {
         }
         undoBatch(undoStack.pop());
         return true;
+    }
+
+    /**
+     * Same as undo(), but also hands back a representative command from the undone batch
+     * (its SKU and before/after prices) so a caller -- e.g. a global "Undo Last" REST endpoint
+     * that isn't scoped to one SKU -- can report what actually changed. Every command in a
+     * batch shares the same SKU and newPrice (one reprice, fanned out per channel), so the
+     * first command in the batch describes the whole undo.
+     */
+    public Optional<PricingCommand> undoAndDescribe() {
+        if (undoStack.isEmpty()) {
+            return Optional.empty();
+        }
+        List<PricingCommand> batch = undoStack.pop();
+        undoBatch(batch);
+        return Optional.of(batch.get(0));
     }
 
     /**

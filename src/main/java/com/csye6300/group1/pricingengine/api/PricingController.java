@@ -61,6 +61,22 @@ public class PricingController {
         return ResponseEntity.ok(Map.of("sku", sku, "prices", pricesByChannel(sku)));
     }
 
+    /**
+     * Undoes whatever is on top of the shared undo stack, regardless of which SKU it belongs
+     * to -- for a dashboard's single global "Undo Last" control rather than one per SKU. Prefer
+     * {@link #undo(String)} when the caller already knows which SKU it means to undo.
+     */
+    @PostMapping("/undo")
+    public Map<String, Object> undoLast() {
+        return invoker.undoAndDescribe()
+                .map(cmd -> Map.<String, Object>of(
+                        "undone", true,
+                        "sku", cmd.getSku(),
+                        "originalPrice", cmd.getOriginalPrice(),
+                        "newPrice", cmd.getNewPrice()))
+                .orElseGet(() -> Map.of("undone", false));
+    }
+
     /** Returns the current price for a SKU on every registered sales channel. */
     @GetMapping("/{sku}")
     public Map<String, Object> currentPrices(@PathVariable String sku) {

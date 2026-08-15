@@ -1,49 +1,69 @@
 /**
- * forecast-panel.js — renders the Demand Forecast panel: for every tracked
- * SKU, the demand Trend the Strategy pattern's selector detected and which
- * concrete PricingStrategy it mapped to. Read-only -- calling
- * Api.getForecast never triggers a reprice, it only previews what one would
- * decide. Reuses InventoryPanel's tracked-SKU list, same as PricingPanel.
+ * Panel 6 — Demand Forecast Panel (Read-only Strategy Decisions)
  */
 
-const ForecastPanel = (() => {
+window.ForecastPanelModule = {
+  currentPage: 1,
+  PAGE_SIZE: 5,
 
-  function rowHtml(sku, trend, strategy, failed = false) {
-    if (failed) {
-      return `<tr data-sku="${sku}"><td>${sku}</td><td colspan="2">—</td></tr>`;
-    }
-    return `
-      <tr data-sku="${sku}">
-        <td>${sku}</td>
-        <td><span class="trend-badge ${trend}">${trend}</span></td>
-        <td>${strategy}</td>
-      </tr>`;
-  }
+  async refresh() {
+    const tableBody = document.getElementById('forecast-table-body');
+    const paginationEl = document.getElementById('forecast-pagination');
+    if (!tableBody) return;
 
-  async function renderRowForSku(sku) {
-    try {
-      const data = await Api.getForecast(sku);
-      return rowHtml(sku, data.trend, data.strategy);
-    } catch (err) {
-      console.error("Failed to load forecast for", sku, err);
-      return rowHtml(sku, null, null, true);
-    }
-  }
-
-  async function render() {
-    const tbody = document.getElementById("forecast-rows");
-    const skus = window.InventoryPanel ? window.InventoryPanel.getTrackedSkus() : [];
-
-    if (skus.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="3">No SKUs tracked yet — add one in the Inventory panel.</td></tr>`;
+    const trackedSkus = Array.from(window.TrackedSkus);
+    if (trackedSkus.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="3" class="state-unavailable">No tracked SKUs available.</td></tr>`;
+      if (paginationEl) paginationEl.innerHTML = '';
       return;
     }
 
-    const rows = await Promise.all(skus.map(renderRowForSku));
-    tbody.innerHTML = rows.join("");
+    const { pageItems: pagedSkus, currentPage, totalPages, totalItems } =
+      window.Paginator.slice(trackedSkus, this.currentPage, this.PAGE_SIZE);
+    this.currentPage = currentPage;
+
+    let rowsHtml = '';
+
+    for (const sku of pagedSkus) {
+      try {
+        const forecast = await window.API.getForecast(sku);
+        const trend = (forecast.trend || 'STABLE').toUpperCase();
+        const strategy = forecast.strategy || forecast.pricingStrategy || 'StandardPricingStrategy';
+
+        let badgeClass = 'badge-gray';
+        if (trend === 'RISING' || trend === 'HIGH') badgeClass = 'badge-green';
+        else if (trend === 'FALLING' || trend === 'LOW') badgeClass = 'badge-red';
+
+        rowsHtml += `
+          <tr>
+            <td class="code-font">${this.escapeHtml(sku)}</td>
+            <td>
+              <span class="badge ${badgeClass}">${this.escapeHtml(trend)}</span>
+            </td>
+            <td>
+              <span class="code-font">${this.escapeHtml(strategy)}</span>
+            </td>
+          </tr>
+        `;
+      } catch (err) {
+        rowsHtml += `
+          <tr>
+            <td class="code-font">${this.escapeHtml(sku)}</td>
+            <td colspan="2" class="state-unavailable">Forecast unavailable (${err.status || 'Error'})</td>
+          </tr>
+        `;
+      }
+    }
+
+    tableBody.innerHTML = rowsHtml;
+
+    if (paginationEl) {
+      paginationEl.innerHTML = window.Paginator.renderControls({ currentPage, totalPages, totalItems });
+      window.Paginator.attach(paginationEl, this);
+    }
+  },
+
+  escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
-
-  return { render };
-})();
-
-window.ForecastPanel = ForecastPanel;
+};
